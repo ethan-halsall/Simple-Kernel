@@ -24,7 +24,7 @@ static bool mutex_is_locked_by(struct mutex *mutex, struct task_struct *task)
 		return false;
 
 #if defined(CONFIG_SMP) || defined(CONFIG_DEBUG_MUTEXES)
-	return mutex->owner == task;
+	return __mutex_owner(mutex) == task;
 #else
 	/* Since UP may be pre-empted, we cannot assume that we own the lock */
 	return false;
