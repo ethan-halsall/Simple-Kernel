@@ -5806,7 +5806,7 @@ static void migrate_tasks(struct rq *dead_rq, bool migrate_pinned_tasks)
 {
 	struct rq *rq = dead_rq;
 	struct task_struct *next, *stop = rq->stop;
-	struct rq_flags rf;
+	struct rq_flags rf, old_rf;
 	int dest_cpu;
 	unsigned int num_pinned_kthreads = 1; /* this thread */
 	LIST_HEAD(tasks);
@@ -5884,6 +5884,13 @@ static void migrate_tasks(struct rq *dead_rq, bool migrate_pinned_tasks)
 			continue;
 		}
 
+		/*
+		 * __migrate_task() may return with a different
+		 * rq->lock held and a new cookie in 'rf', but we need
+		 * to preserve rf::clock_update_flags for 'dead_rq'.
+		 */
+		old_rf = rf;
+
 		/* Find suitable destination for @next, with force if needed. */
 		dest_cpu = select_fallback_rq(dead_rq->cpu, next, false);
 
@@ -5894,6 +5901,7 @@ static void migrate_tasks(struct rq *dead_rq, bool migrate_pinned_tasks)
 			rq = dead_rq;
 			raw_spin_lock(&next->pi_lock);
 			raw_spin_lock(&rq->lock);
+			rf = old_rf;
 		}
 		raw_spin_unlock(&next->pi_lock);
 	}
