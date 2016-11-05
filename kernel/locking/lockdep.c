@@ -4429,14 +4429,14 @@ void lockdep_rcu_suspicious(const char *file, const int line, const char *s)
 	struct task_struct *curr = current;
 
 	/* Note: the following can be executed concurrently, so be careful. */
-	pr_warn("\n");
-	pr_warn("=============================\n");
-	pr_warn("WARNING: suspicious RCU usage\n");
+	printk("\n");
+	pr_err("===============================\n");
+	pr_err("[ ERR: suspicious RCU usage.  ]\n");
 	print_kernel_ident();
-	pr_warn("-----------------------------\n");
-	pr_warn("%s:%d %s!\n", file, line, s);
-	pr_warn("\nother info that might help us debug this:\n\n");
-	pr_warn("\n%srcu_scheduler_active = %d, debug_locks = %d\n",
+	pr_err("-------------------------------\n");
+	pr_err("%s:%d %s!\n", file, line, s);
+	pr_err("\nother info that might help us debug this:\n\n");
+	pr_err("\n%srcu_scheduler_active = %d, debug_locks = %d\n",
 	       !rcu_lockdep_current_cpu_online()
 			? "RCU used illegally from offline CPU!\n"
 			: !rcu_is_watching()
