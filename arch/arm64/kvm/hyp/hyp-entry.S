@@ -158,9 +158,16 @@ el1_trap:
 	 * x1: vcpu pointer
 	 */
 
-	/* Guest accessed VFP/SIMD registers, save host, restore Guest */
+	/*
+	 * We trap the first access to the FP/SIMD to save the host context
+	 * and restore the guest context lazily.
+	 * If FP/SIMD is not implemented, handle the trap and inject an
+	 * undefined instruction exception to the guest.
+	 */
+alternative_if_not ARM64_HAS_NO_FPSIMD
 	cmp	x0, #ESR_ELx_EC_FP_ASIMD
 	b.eq	__fpsimd_guest_restore
+alternative_else_nop_endif
 
 	mov	x0, #ARM_EXCEPTION_TRAP
 	b	__guest_exit
