@@ -5615,7 +5615,7 @@ static void migrate_tasks(struct rq *dead_rq, struct rq_flags *rf,
 		 */
 		if ((migrate_pinned_tasks && rq->nr_running == 1) ||
 		   (!migrate_pinned_tasks &&
-		    rq->nr_running == num_pinned_kthreads))
+		    rq->nr_running <= num_pinned_kthreads))
 			break;
 
 		/*
@@ -5653,7 +5653,8 @@ static void migrate_tasks(struct rq *dead_rq, struct rq_flags *rf,
 		 * interferred since we don't stop all CPUs. Ignore warning for
 		 * this case.
 		 */
-		if (WARN_ON(task_rq(next) != rq || !task_on_rq_queued(next))) {
+		if (WARN_ON((task_rq(next) != rq || !task_on_rq_queued(next)) &&
+			     migrate_pinned_tasks)) {
 			raw_spin_unlock(&next->pi_lock);
 			continue;
 		}
