@@ -54,18 +54,6 @@ static inline unsigned long cputime_to_jiffies(const cputime_t ct)
 	return mulhdu((__force u64) ct, __cputime_jiffies_factor);
 }
 
-/* Estimate the scaled cputime by scaling the real cputime based on
- * the last scaled to real ratio */
-static inline cputime_t cputime_to_scaled(const cputime_t ct)
-{
-	if (cpu_has_feature(CPU_FTR_SPURR) &&
-	    __this_cpu_read(cputime_last_delta))
-		return (__force u64) ct *
-			__this_cpu_read(cputime_scaled_last_delta) /
-			__this_cpu_read(cputime_last_delta);
-	return ct;
-}
-
 static inline cputime_t jiffies_to_cputime(const unsigned long jif)
 {
 	u64 ct;
