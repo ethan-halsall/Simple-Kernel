@@ -1787,7 +1787,10 @@ struct task_struct {
 	int __user *set_child_tid;		/* CLONE_CHILD_SETTID */
 	int __user *clear_child_tid;		/* CLONE_CHILD_CLEARTID */
 
-	cputime_t utime, stime, utimescaled, stimescaled;
+	cputime_t utime, stime;
+#ifdef CONFIG_ARCH_HAS_SCALED_CPUTIME
+	cputime_t utimescaled, stimescaled;
+#endif
 	cputime_t gtime;
 #ifdef CONFIG_CPU_FREQ_TIMES
 	u64 *time_in_state;
@@ -2409,8 +2412,6 @@ struct task_struct *try_get_task_struct(struct task_struct **ptask);
 #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
 extern void task_cputime(struct task_struct *t,
 			 cputime_t *utime, cputime_t *stime);
-extern void task_cputime_scaled(struct task_struct *t,
-				cputime_t *utimescaled, cputime_t *stimescaled);
 extern cputime_t task_gtime(struct task_struct *t);
 #else
 static inline void task_cputime(struct task_struct *t,
@@ -2422,6 +2423,13 @@ static inline void task_cputime(struct task_struct *t,
 		*stime = t->stime;
 }
 
+static inline cputime_t task_gtime(struct task_struct *t)
+{
+	return t->gtime;
+}
+#endif
+
+#ifdef CONFIG_ARCH_HAS_SCALED_CPUTIME
 static inline void task_cputime_scaled(struct task_struct *t,
 				       cputime_t *utimescaled,
 				       cputime_t *stimescaled)
@@ -2431,12 +2439,15 @@ static inline void task_cputime_scaled(struct task_struct *t,
 	if (stimescaled)
 		*stimescaled = t->stimescaled;
 }
-
-static inline cputime_t task_gtime(struct task_struct *t)
+#else
+static inline void task_cputime_scaled(struct task_struct *t,
+				       cputime_t *utimescaled,
+				       cputime_t *stimescaled)
 {
-	return t->gtime;
+	task_cputime(t, utimescaled, stimescaled);
 }
 #endif
+
 extern void task_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st);
 extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st);
 
