@@ -2855,6 +2855,10 @@ static inline void set_wake_up_idle(bool enabled)
 		current->flags &= ~PF_WAKE_UP_IDLE;
 }
 
+#ifndef cpu_relax_yield
+#define cpu_relax_yield() cpu_relax()
+#endif
+
 /*
  * Do not use outside of architecture code which knows its limitations.
  *
