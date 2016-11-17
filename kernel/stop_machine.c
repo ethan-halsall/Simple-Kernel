@@ -77,7 +77,7 @@ static void __cpu_stop_queue_work(struct cpu_stopper *stopper,
 static bool cpu_stop_queue_work(unsigned int cpu, struct cpu_stop_work *work)
 {
 	struct cpu_stopper *stopper = &per_cpu(cpu_stopper, cpu);
-	WAKE_Q(wakeq);
+	DEFINE_WAKE_Q(wakeq);
 	unsigned long flags;
 	bool enabled;
 
@@ -234,7 +234,7 @@ static int cpu_stop_queue_two_works(int cpu1, struct cpu_stop_work *work1,
 {
 	struct cpu_stopper *stopper1 = per_cpu_ptr(&cpu_stopper, cpu1);
 	struct cpu_stopper *stopper2 = per_cpu_ptr(&cpu_stopper, cpu2);
-	WAKE_Q(wakeq);
+	DEFINE_WAKE_Q(wakeq);
 	int err;
 retry:
 	raw_spin_lock_irq(&stopper1->lock);

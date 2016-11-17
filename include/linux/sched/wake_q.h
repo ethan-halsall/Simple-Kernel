@@ -1,8 +1,7 @@
 #ifndef _LINUX_SCHED_WAKE_Q_H
 #define _LINUX_SCHED_WAKE_Q_H
 
-/*
- * Wake-queues are lists of tasks with a pending wakeup, whose
+/* Wake-queues are lists of tasks with a pending wakeup, whose
  * callers have already marked the task as woken internally,
  * and can thus carry on. A common use case is being able to
  * do the wakeups once the corresponding user lock as been
@@ -20,16 +19,12 @@
  *
  * The DEFINE_WAKE_Q macro declares and initializes the list head.
  * wake_up_q() does NOT reinitialize the list; it's expected to be
- * called near the end of a function. Otherwise, the list can be
- * re-initialized for later re-use by wake_q_init().
+ * called near the end of a function, where the fact that the queue is
+ * not used again will be easy to see by inspection.
  *
- * NOTE that this can cause spurious wakeups. schedule() callers
+ * Note that this can cause spurious wakeups. schedule() callers
  * must ensure the call is done inside a loop, confirming that the
  * wakeup condition has in fact occurred.
- *
- * NOTE that there is no guarantee the wakeup will happen any later than the
- * wake_q_add() location. Therefore task must be ready to be woken at the
- * location of the wake_q_add().
  */
 
 #include <linux/sched.h>
@@ -42,7 +37,7 @@ struct wake_q_head {
 
 #define WAKE_Q_TAIL ((struct wake_q_node *) 0x01)
 
-#define WAKE_Q(name)				\
+#define DEFINE_WAKE_Q(name)				\
 	struct wake_q_head name = { WAKE_Q_TAIL, &name.first }
 
 static inline void wake_q_init(struct wake_q_head *head)
