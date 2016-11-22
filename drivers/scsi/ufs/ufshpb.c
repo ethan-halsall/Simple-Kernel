@@ -622,10 +622,7 @@ static inline void ufshpb_set_read_buf_cmd(unsigned char *cmd,
 static void ufshpb_bio_init(struct bio *bio, struct bio_vec *table,
 		int max_vecs)
 {
-	bio_init(bio);
-
-	bio->bi_io_vec = table;
-	bio->bi_max_vecs = max_vecs;
+	bio_init(bio, table, max_vecs);
 }
 
 static int ufshpb_add_bio_page(struct ufshpb_lu *hpb,
