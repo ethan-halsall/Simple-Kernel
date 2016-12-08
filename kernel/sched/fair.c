@@ -6668,17 +6668,16 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 			if (min_runnable_load > (runnable_load + imbalance)) {
 				/*
 				 * The runnable load is significantly smaller
-				 *  so we can pick this new cpu
+				 * so we can pick this new cpu
 				 */
 				min_runnable_load = runnable_load;
 				min_avg_load = avg_load;
 				idlest = group;
 			} else if ((runnable_load < (min_runnable_load + imbalance)) &&
-					(100*min_avg_load > imbalance_scale*avg_load)) {
+				   (100*min_avg_load > imbalance_scale*avg_load)) {
 				/*
-				 * The runnable loads are close so we take
-				 * into account blocked load through avg_load
-				 *  which is blocked + runnable load
+				 * The runnable loads are close so take the
+				 * blocked load into account through avg_load.
 				 */
 				min_avg_load = avg_load;
 				idlest = group;
@@ -6697,8 +6696,10 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 	 * utilized systems if we require spare_capacity > task_util(p),
 	 * so we allow for some task stuffing by using
 	 * spare_capacity > task_util(p)/2.
-	 * spare capacity can't be used for fork because the utilization has
-	 * not been set yet as it need to get a rq to init the utilization
+	 *
+	 * Spare capacity can't be used for fork because the utilization has
+	 * not been set yet, we must first select a rq to compute the initial
+	 * utilization.
 	 */
 	if (sd_flag & SD_BALANCE_FORK)
 		goto skip_spare;
@@ -6706,15 +6707,21 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 	if (this_spare > task_util(p) / 2 &&
 	    imbalance_scale*this_spare > 100*most_spare)
 		return NULL;
-	else if (most_spare > task_util(p) / 2)
+
+	if (most_spare > task_util(p) / 2)
 		return most_spare_sg;
 
 skip_spare:
-	if (!idlest ||
-	    (min_runnable_load > (this_runnable_load + imbalance)) ||
-	    ((this_runnable_load < (min_runnable_load + imbalance)) &&
-			(100*this_avg_load < imbalance_scale*min_avg_load)))
+	if (!idlest)
 		return NULL;
+
+	if (min_runnable_load > (this_runnable_load + imbalance))
+		return NULL;
+
+	if ((this_runnable_load < (min_runnable_load + imbalance)) &&
+	     (100*this_avg_load < imbalance_scale*min_avg_load))
+		return NULL;
+
 	return idlest;
 }
 
