@@ -1687,8 +1687,8 @@ void timekeeping_resume(void)
 	struct clocksource *clock = tk->tkr_mono.clock;
 	unsigned long flags;
 	struct timespec64 ts_new, ts_delta;
-	cycle_t cycle_now, cycle_delta;
 	bool inject_sleeptime = false;
+	cycle_t cycle_now;
 
 	read_persistent_clock64(&ts_new);
 
@@ -1713,27 +1713,11 @@ void timekeeping_resume(void)
 	cycle_now = tk_clock_read(&tk->tkr_mono);
 	if ((clock->flags & CLOCK_SOURCE_SUSPEND_NONSTOP) &&
 		cycle_now > tk->tkr_mono.cycle_last) {
-		u64 num, max = ULLONG_MAX;
-		u32 mult = clock->mult;
-		u32 shift = clock->shift;
-		s64 nsec = 0;
+		u64 nsec, cyc_delta;
 
-		cycle_delta = clocksource_delta(cycle_now, tk->tkr_mono.cycle_last,
-						tk->tkr_mono.mask);
-
-		/*
-		 * "cycle_delta * mutl" may cause 64 bits overflow, if the
-		 * suspended time is too long. In that case we need do the
-		 * 64 bits math carefully
-		 */
-		do_div(max, mult);
-		if (cycle_delta > max) {
-			num = div64_u64(cycle_delta, max);
-			nsec = (((u64) max * mult) >> shift) * num;
-			cycle_delta -= num * max;
-		}
-		nsec += ((u64) cycle_delta * mult) >> shift;
-
+		cyc_delta = clocksource_delta(cycle_now, tk->tkr_mono.cycle_last,
+					      tk->tkr_mono.mask);
+		nsec = mul_u64_u32_shr(cyc_delta, clock->mult, clock->shift);
 		ts_delta = ns_to_timespec64(nsec);
 		inject_sleeptime = true;
 	} else if (timespec64_compare(&ts_new, &timekeeping_suspend_time) > 0) {
