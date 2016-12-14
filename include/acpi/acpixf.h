@@ -958,15 +958,6 @@ void acpi_terminate_debugger(void);
 /*
  * Divergences
  */
-ACPI_GLOBAL(u8, acpi_gbl_permanent_mmap);
-
-ACPI_EXTERNAL_RETURN_STATUS(acpi_status
-			    acpi_get_table_with_size(acpi_string signature,
-						     u32 instance,
-						     struct acpi_table_header
-						     **out_table,
-						     acpi_size *tbl_size))
-
 ACPI_EXTERNAL_RETURN_STATUS(acpi_status
 			    acpi_get_data_full(acpi_handle object,
 					       acpi_object_handler handler,
