@@ -1157,6 +1157,27 @@ void cpuhp_online_idle(enum cpuhp_state state)
 	complete(&st->done);
 }
 
+static int switch_to_rt_policy(void)
+{
+	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+	unsigned int policy = current->policy;
+
+	if (policy == SCHED_NORMAL)
+		/* Switch to SCHED_FIFO from SCHED_NORMAL. */
+		return sched_setscheduler_nocheck(current, SCHED_FIFO, &param);
+	else if (policy == SCHED_FIFO || policy == SCHED_RR)
+		return 1;
+	else
+		return -EPERM;
+}
+
+static int switch_to_fair_policy(void)
+{
+	struct sched_param param = { .sched_priority = 0 };
+
+	return sched_setscheduler_nocheck(current, SCHED_NORMAL, &param);
+}
+
 /* Requires cpu_add_remove_lock to be held */
 static int _cpu_up(unsigned int cpu, int tasks_frozen, enum cpuhp_state target)
 {
@@ -1224,6 +1245,7 @@ out:
 static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 {
 	int err = 0;
+	int switch_err;
 
 	if (!cpu_possible(cpu)) {
 		pr_err("can't online cpu %d because it is not configured as may-hotadd at boot time\n",
@@ -1234,9 +1256,23 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 		return -EINVAL;
 	}
 
+	/*
+	 * CPU hotplug operations consists of many steps and each step
+	 * calls a callback of core kernel subsystem. CPU hotplug-in
+	 * operation may get preempted by other CFS tasks and whole
+	 * operation of cpu hotplug in CPU gets delayed. Switch the
+	 * current task to SCHED_FIFO from SCHED_NORMAL, so that
+	 * hotplug in operation may complete quickly in heavy loaded
+	 * conditions and new CPU will start handle the workload.
+	 */
+
+	switch_err = switch_to_rt_policy();
+	if (switch_err < 0)
+		return switch_err;
+
 	err = try_online_node(cpu_to_node(cpu));
 	if (err)
-		return err;
+		goto switch_out;
 
 	cpu_maps_update_begin();
 
@@ -1252,6 +1288,14 @@ static int do_cpu_up(unsigned int cpu, enum cpuhp_state target)
 	err = _cpu_up(cpu, 0, target);
 out:
 	cpu_maps_update_done();
+switch_out:
+	if (!switch_err) {
+		switch_err = switch_to_fair_policy();
+		if (switch_err)
+			pr_err("Hotplug policy switch err=%d Task %s pid=%d\n",
+				switch_err, current->comm, current->pid);
+	}
+
 	return err;
 }
 
