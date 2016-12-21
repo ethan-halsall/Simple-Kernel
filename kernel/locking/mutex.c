@@ -803,7 +803,7 @@ ww_mutex_deadlock_injection(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 }
 
 int __sched
-__ww_mutex_lock(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
+ww_mutex_lock(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 {
 	int ret;
 
@@ -816,10 +816,10 @@ __ww_mutex_lock(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(__ww_mutex_lock);
+EXPORT_SYMBOL_GPL(ww_mutex_lock);
 
 int __sched
-__ww_mutex_lock_interruptible(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
+ww_mutex_lock_interruptible(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 {
 	int ret;
 
@@ -833,7 +833,7 @@ __ww_mutex_lock_interruptible(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(__ww_mutex_lock_interruptible);
+EXPORT_SYMBOL_GPL(ww_mutex_lock_interruptible);
 
 #endif
 
@@ -1011,7 +1011,7 @@ EXPORT_SYMBOL(mutex_trylock);
 
 #ifndef CONFIG_DEBUG_LOCK_ALLOC
 int __sched
-__ww_mutex_lock(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
+ww_mutex_lock(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 {
 	might_sleep();
 
@@ -1023,10 +1023,10 @@ __ww_mutex_lock(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 
 	return __ww_mutex_lock_slowpath(lock, ctx);
 }
-EXPORT_SYMBOL(__ww_mutex_lock);
+EXPORT_SYMBOL(ww_mutex_lock);
 
 int __sched
-__ww_mutex_lock_interruptible(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
+ww_mutex_lock_interruptible(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 {
 	might_sleep();
 
@@ -1038,7 +1038,7 @@ __ww_mutex_lock_interruptible(struct ww_mutex *lock, struct ww_acquire_ctx *ctx)
 
 	return __ww_mutex_lock_interruptible_slowpath(lock, ctx);
 }
-EXPORT_SYMBOL(__ww_mutex_lock_interruptible);
+EXPORT_SYMBOL(ww_mutex_lock_interruptible);
 
 #endif
 
