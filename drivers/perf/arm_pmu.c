@@ -28,7 +28,7 @@
 #include <asm/irq_regs.h>
 
 #define USE_CPUHP_STATE CPUHP_AP_PERF_ARM_STARTING
-#define USE_CPUHP_STR "AP_PERF_ARM_STARTING"
+#define USE_CPUHP_STR "perf/arm/pmu:starting"
 
 static int
 armpmu_map_cache_event(const unsigned (*cache_map)
