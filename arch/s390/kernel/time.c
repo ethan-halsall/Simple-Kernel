@@ -214,7 +214,7 @@ void read_boot_clock64(struct timespec64 *ts)
 	tod_to_timeval(clock - TOD_UNIX_EPOCH, ts);
 }
 
-static cycle_t read_tod_clock(struct clocksource *cs)
+static u64 read_tod_clock(struct clocksource *cs)
 {
 	return get_tod_clock();
 }

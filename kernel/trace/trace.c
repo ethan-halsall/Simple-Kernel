@@ -235,7 +235,7 @@ static int __init set_tracepoint_printk(char *str)
 }
 __setup("tp_printk", set_tracepoint_printk);
 
-unsigned long long ns2usecs(cycle_t nsec)
+unsigned long long ns2usecs(u64 nsec)
 {
 	nsec += 500;
 	do_div(nsec, 1000);
@@ -575,7 +575,7 @@ int trace_pid_write(struct trace_pid_list *filtered_pids,
 	return read;
 }
 
-static cycle_t buffer_ftrace_now(struct trace_buffer *buf, int cpu)
+static u64 buffer_ftrace_now(struct trace_buffer *buf, int cpu)
 {
 	u64 ts;
 
@@ -589,7 +589,7 @@ static cycle_t buffer_ftrace_now(struct trace_buffer *buf, int cpu)
 	return ts;
 }
 
-cycle_t ftrace_now(int cpu)
+u64 ftrace_now(int cpu)
 {
 	return buffer_ftrace_now(&global_trace.trace_buffer, cpu);
 }
