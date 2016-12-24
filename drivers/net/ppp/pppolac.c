@@ -35,7 +35,7 @@
 #include <linux/if_pppox.h>
 #include <linux/ppp_channel.h>
 #include <net/tcp_states.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #define L2TP_CONTROL_BIT	0x80
 #define L2TP_LENGTH_BIT		0x40

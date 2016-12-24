@@ -21,7 +21,7 @@
 #include <linux/list.h>
 #include <linux/ctype.h>
 #include <linux/workqueue.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <asm/page.h>
 
 #include "edac_core.h"
@@ -39,7 +39,7 @@ static atomic_t pci_indexes = ATOMIC_INIT(0);
  *	edac_pci it is going to control/register with the EDAC CORE.
  */
 struct edac_pci_ctl_info *edac_pci_alloc_ctl_info(unsigned int sz_pvt,
-						const char *edac_pci_name)
+												  const char *edac_pci_name)
 {
 	struct edac_pci_ctl_info *pci;
 	void *p = NULL, *pvt;
@@ -53,7 +53,7 @@ struct edac_pci_ctl_info *edac_pci_alloc_ctl_info(unsigned int sz_pvt,
 
 	/* Alloc the needed control struct memory */
 	pci = kzalloc(size, GFP_KERNEL);
-	if (pci  == NULL)
+	if (pci == NULL)
 		return NULL;
 
 	/* Now much private space */
@@ -99,7 +99,8 @@ static struct edac_pci_ctl_info *find_edac_pci_by_dev(struct device *dev)
 
 	edac_dbg(1, "\n");
 
-	list_for_each(item, &edac_pci_list) {
+	list_for_each(item, &edac_pci_list)
+	{
 		pci = list_entry(item, struct edac_pci_ctl_info, link);
 
 		if (pci->dev == dev)
@@ -132,10 +133,12 @@ static int add_edac_pci_to_global_list(struct edac_pci_ctl_info *pci)
 		goto fail0;
 
 	/* Insert in ascending order by 'pci_idx', so find position */
-	list_for_each(item, &edac_pci_list) {
+	list_for_each(item, &edac_pci_list)
+	{
 		rover = list_entry(item, struct edac_pci_ctl_info, link);
 
-		if (rover->pci_idx >= pci->pci_idx) {
+		if (rover->pci_idx >= pci->pci_idx)
+		{
 			if (unlikely(rover->pci_idx == pci->pci_idx))
 				goto fail1;
 
@@ -149,16 +152,17 @@ static int add_edac_pci_to_global_list(struct edac_pci_ctl_info *pci)
 
 fail0:
 	edac_printk(KERN_WARNING, EDAC_PCI,
-		"%s (%s) %s %s already assigned %d\n",
-		dev_name(rover->dev), edac_dev_name(rover),
-		rover->mod_name, rover->ctl_name, rover->pci_idx);
+				"%s (%s) %s %s already assigned %d\n",
+				dev_name(rover->dev), edac_dev_name(rover),
+				rover->mod_name, rover->ctl_name, rover->pci_idx);
 	return 1;
 
 fail1:
 	edac_printk(KERN_WARNING, EDAC_PCI,
-		"but in low-level driver: attempt to assign\n"
-		"\tduplicate pci_idx %d in %s()\n", rover->pci_idx,
-		__func__);
+				"but in low-level driver: attempt to assign\n"
+				"\tduplicate pci_idx %d in %s()\n",
+				rover->pci_idx,
+				__func__);
 	return 1;
 }
 
@@ -195,7 +199,8 @@ static void edac_pci_workq_function(struct work_struct *work_req)
 
 	mutex_lock(&edac_pci_ctls_mutex);
 
-	if (pci->op_state != OP_RUNNING_POLL) {
+	if (pci->op_state != OP_RUNNING_POLL)
+	{
 		mutex_unlock(&edac_pci_ctls_mutex);
 		return;
 	}
@@ -252,26 +257,29 @@ int edac_pci_add_device(struct edac_pci_ctl_info *pci, int edac_idx)
 	if (add_edac_pci_to_global_list(pci))
 		goto fail0;
 
-	if (edac_pci_create_sysfs(pci)) {
+	if (edac_pci_create_sysfs(pci))
+	{
 		edac_pci_printk(pci, KERN_WARNING,
-				"failed to create sysfs pci\n");
+						"failed to create sysfs pci\n");
 		goto fail1;
 	}
 
-	if (pci->edac_check) {
+	if (pci->edac_check)
+	{
 		pci->op_state = OP_RUNNING_POLL;
 
 		INIT_DELAYED_WORK(&pci->work, edac_pci_workq_function);
 		edac_queue_work(&pci->work, msecs_to_jiffies(edac_pci_get_poll_msec()));
-
-	} else {
+	}
+	else
+	{
 		pci->op_state = OP_RUNNING_INTERRUPT;
 	}
 
 	edac_pci_printk(pci, KERN_INFO,
-		"Giving out device to module %s controller %s: DEV %s (%s)\n",
-		pci->mod_name, pci->ctl_name, pci->dev_name,
-		edac_op_state_to_string(pci->op_state));
+					"Giving out device to module %s controller %s: DEV %s (%s)\n",
+					pci->mod_name, pci->ctl_name, pci->dev_name,
+					edac_op_state_to_string(pci->op_state));
 
 	mutex_unlock(&edac_pci_ctls_mutex);
 	return 0;
@@ -310,7 +318,8 @@ struct edac_pci_ctl_info *edac_pci_del_device(struct device *dev)
 	 * if not, then leave
 	 */
 	pci = find_edac_pci_by_dev(dev);
-	if (pci  == NULL) {
+	if (pci == NULL)
+	{
 		mutex_unlock(&edac_pci_ctls_mutex);
 		return NULL;
 	}
@@ -325,8 +334,8 @@ struct edac_pci_ctl_info *edac_pci_del_device(struct device *dev)
 		edac_stop_work(&pci->work);
 
 	edac_printk(KERN_INFO, EDAC_PCI,
-		"Removed device %d for %s %s: DEV %s\n",
-		pci->pci_idx, pci->mod_name, pci->ctl_name, edac_dev_name(pci));
+				"Removed device %d for %s %s: DEV %s\n",
+				pci->pci_idx, pci->mod_name, pci->ctl_name, edac_dev_name(pci));
 
 	return pci;
 }
@@ -345,9 +354,10 @@ static void edac_pci_generic_check(struct edac_pci_ctl_info *pci)
 
 /* free running instance index counter */
 static int edac_pci_idx;
-#define EDAC_PCI_GENCTL_NAME	"EDAC PCI controller"
+#define EDAC_PCI_GENCTL_NAME "EDAC PCI controller"
 
-struct edac_pci_gen_data {
+struct edac_pci_gen_data
+{
 	int edac_idx;
 };
 
@@ -363,7 +373,7 @@ struct edac_pci_gen_data {
  *	the generic device, with default values
  */
 struct edac_pci_ctl_info *edac_pci_create_generic_ctl(struct device *dev,
-						const char *mod_name)
+													  const char *mod_name)
 {
 	struct edac_pci_ctl_info *pci;
 	struct edac_pci_gen_data *pdata;
@@ -384,7 +394,8 @@ struct edac_pci_ctl_info *edac_pci_create_generic_ctl(struct device *dev,
 
 	pdata->edac_idx = edac_pci_idx++;
 
-	if (edac_pci_add_device(pci, pdata->edac_idx) > 0) {
+	if (edac_pci_add_device(pci, pdata->edac_idx) > 0)
+	{
 		edac_dbg(3, "failed edac_pci_add_device()\n");
 		edac_pci_free_ctl_info(pci);
 		return NULL;

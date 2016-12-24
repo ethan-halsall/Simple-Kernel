@@ -46,7 +46,7 @@
 #include <linux/pkeys.h>
 #include <linux/oom.h>
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <asm/cacheflush.h>
 #include <asm/tlb.h>
 #include <asm/mmu_context.h>

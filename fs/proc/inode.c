@@ -25,7 +25,7 @@
 #include <linux/mount.h>
 #include <linux/magic.h>
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #include "internal.h"
 
