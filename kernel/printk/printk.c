@@ -2295,7 +2295,7 @@ static void console_cont_flush(char *text, size_t size)
 	len = cont_print_text(text, size);
 	raw_spin_unlock(&logbuf_lock);
 	stop_critical_timings();
-	call_console_drivers(cont.level, NULL, 0, text, len);
+	call_console_drivers(NULL, 0, text, len);
 	start_critical_timings();
 	local_irq_restore(flags);
 	return;
