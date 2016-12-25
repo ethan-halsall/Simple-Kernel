@@ -272,10 +272,10 @@ static int alarmtimer_suspend(struct device *dev)
 		if (!next)
 			continue;
 		delta = ktime_sub(next->expires, base->gettime());
-		if (!min.tv64 || (delta.tv64 < min.tv64))
+		if (!min || (delta < min))
 			min = delta;
 	}
-	if (min.tv64 == 0)
+	if (min == 0)
 		return 0;
 
 	if (ktime_to_ns(min) < 2 * NSEC_PER_SEC) {
@@ -327,7 +327,7 @@ static void alarmtimer_freezerset(ktime_t absexp, enum alarmtimer_type type)
 	delta = ktime_sub(absexp, base->gettime());
 
 	spin_lock_irqsave(&freezer_delta_lock, flags);
-	if (!freezer_delta.tv64 || (delta.tv64 < freezer_delta.tv64))
+	if (!freezer_delta || (delta < freezer_delta))
 		freezer_delta = delta;
 	spin_unlock_irqrestore(&freezer_delta_lock, flags);
 }
@@ -449,10 +449,10 @@ u64 alarm_forward(struct alarm *alarm, ktime_t now, ktime_t interval)
 
 	delta = ktime_sub(now, alarm->node.expires);
 
-	if (delta.tv64 < 0)
+	if (delta < 0)
 		return 0;
 
-	if (unlikely(delta.tv64 >= interval.tv64)) {
+	if (unlikely(delta >= interval)) {
 		s64 incr = ktime_to_ns(interval);
 
 		overrun = ktime_divns(delta, incr);
@@ -460,7 +460,7 @@ u64 alarm_forward(struct alarm *alarm, ktime_t now, ktime_t interval)
 		alarm->node.expires = ktime_add_ns(alarm->node.expires,
 							incr*overrun);
 
-		if (alarm->node.expires.tv64 > now.tv64)
+		if (alarm->node.expires > now)
 			return overrun;
 		/*
 		 * This (and the ktime_add() below) is the
@@ -517,7 +517,7 @@ static enum alarmtimer_restart alarm_handle_timer(struct alarm *alarm,
 	}
 
 	/* Re-add periodic timers */
-	if (ptr->it.alarm.interval.tv64) {
+	if (ptr->it.alarm.interval) {
 		ptr->it_overrun += alarm_forward(alarm, now,
 						ptr->it.alarm.interval);
 		result = ALARMTIMER_RESTART;
@@ -658,7 +658,7 @@ static int alarm_timer_set(struct k_itimer *timr, int flags,
 	 * Rate limit to the tick as a hot fix to prevent DOS. Will be
 	 * mopped up later.
 	 */
-	if (timr->it.alarm.interval.tv64 &&
+	if (timr->it.alarm.interval &&
 			ktime_to_ns(timr->it.alarm.interval) < TICK_NSEC)
 		timr->it.alarm.interval = ktime_set(0, TICK_NSEC);
 
@@ -734,7 +734,7 @@ static int update_rmtp(ktime_t exp, enum  alarmtimer_type type,
 
 	rem = ktime_sub(exp, alarm_bases[type].gettime());
 
-	if (rem.tv64 <= 0)
+	if (rem <= 0)
 		return 0;
 	rmt = ktime_to_timespec(rem);
 
@@ -759,7 +759,7 @@ static long __sched alarm_timer_nsleep_restart(struct restart_block *restart)
 	struct alarm alarm;
 	int ret = 0;
 
-	exp.tv64 = restart->nanosleep.expires;
+	exp = restart->nanosleep.expires;
 	alarm_init(&alarm, type, alarmtimer_nsleep_wakeup);
 
 	if (alarmtimer_do_nsleep(&alarm, exp))
@@ -840,7 +840,7 @@ static int alarm_timer_nsleep(const clockid_t which_clock, int flags,
 	restart = &current->restart_block;
 	restart->fn = alarm_timer_nsleep_restart;
 	restart->nanosleep.clockid = type;
-	restart->nanosleep.expires = exp.tv64;
+	restart->nanosleep.expires = exp;
 	restart->nanosleep.rmtp = rmtp;
 	ret = -ERESTART_RESTARTBLOCK;
 
