@@ -231,7 +231,7 @@ down_read_failed(struct ld_semaphore *sem, long count, long timeout)
 
 	/* wait to be given the lock */
 	for (;;) {
-		set_task_state(tsk, TASK_UNINTERRUPTIBLE);
+		set_current_state(TASK_UNINTERRUPTIBLE);
 
 		if (!smp_load_acquire(&waiter.task))
 			break;
@@ -240,7 +240,7 @@ down_read_failed(struct ld_semaphore *sem, long count, long timeout)
 		timeout = schedule_timeout(timeout);
 	}
 
-	__set_task_state(tsk, TASK_RUNNING);
+	__set_current_state(TASK_RUNNING);
 
 	if (!timeout) {
 		/* lock timed out but check if this task was just
@@ -290,14 +290,14 @@ down_write_failed(struct ld_semaphore *sem, long count, long timeout)
 
 	waiter.task = tsk;
 
-	set_task_state(tsk, TASK_UNINTERRUPTIBLE);
+	set_current_state(TASK_UNINTERRUPTIBLE);
 	for (;;) {
 		if (!timeout)
 			break;
 		raw_spin_unlock_irq(&sem->wait_lock);
 		timeout = schedule_timeout(timeout);
 		raw_spin_lock_irq(&sem->wait_lock);
-		set_task_state(tsk, TASK_UNINTERRUPTIBLE);
+		set_current_state(TASK_UNINTERRUPTIBLE);
 		locked = writer_trylock(sem);
 		if (locked)
 			break;
@@ -318,7 +318,7 @@ down_write_failed(struct ld_semaphore *sem, long count, long timeout)
 
 	raw_spin_unlock_irq(&sem->wait_lock);
 
-	__set_task_state(tsk, TASK_RUNNING);
+	__set_current_state(TASK_RUNNING);
 
 	/* lock wait may have timed out */
 	if (!locked)
