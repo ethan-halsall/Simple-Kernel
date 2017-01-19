@@ -620,6 +620,8 @@ setup_arch (char **cmdline_p)
 	check_sal_cache_flush();
 #endif
 	paging_init();
+
+	clear_sched_clock_stable();
 }
 
 /*
