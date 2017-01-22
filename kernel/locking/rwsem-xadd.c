@@ -519,8 +519,6 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 		 * wake any read locks that were queued ahead of us.
 		 */
 		if (!is_first_waiter && count > RWSEM_WAITING_BIAS) {
-			WAKE_Q(wake_q);
-
 			__rwsem_mark_wake(sem, RWSEM_WAKE_READERS, &wake_q);
 			/*
 			 * The wakeup is normally called _after_ the wait_lock
@@ -530,6 +528,11 @@ __rwsem_down_write_failed_common(struct rw_semaphore *sem, int state)
 			 * for attempting rwsem_try_write_lock().
 			 */
 			wake_up_q(&wake_q);
+
+			/*
+			 * Reinitialize wake_q after use.
+			 */
+			wake_q_init(&wake_q);
 		}
 
 	} else
