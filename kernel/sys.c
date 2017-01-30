@@ -2231,6 +2231,23 @@ int __weak arch_prctl_spec_ctrl_set(struct task_struct *t, unsigned long which,
 {
 	return -EINVAL;
 }
+static int propagate_has_child_subreaper(struct task_struct *p, void *data)
+{
+	/*
+	 * If task has has_child_subreaper - all its decendants
+	 * already have these flag too and new decendants will
+	 * inherit it on fork, skip them.
+	 *
+	 * If we've found child_reaper - skip descendants in
+	 * it's subtree as they will never get out pidns.
+	 */
+	if (p->signal->has_child_subreaper ||
+	    is_child_reaper(task_pid(p)))
+		return 0;
+
+	p->signal->has_child_subreaper = 1;
+	return 1;
+}
 
 SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 		unsigned long, arg4, unsigned long, arg5)
@@ -2412,6 +2429,10 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 		break;
 	case PR_SET_CHILD_SUBREAPER:
 		me->signal->is_child_subreaper = !!arg2;
+		if (!arg2)
+			break;
+
+		walk_process_tree(me, propagate_has_child_subreaper, NULL);
 		break;
 	case PR_GET_CHILD_SUBREAPER:
 		error = put_user(me->signal->is_child_subreaper,
