@@ -761,7 +761,7 @@ struct signal_struct {
 	struct thread_group_cputimer cputimer;
 
 	/* Earliest-expiration cache. */
-	struct task_cputime_t cputime_expires;
+	struct task_cputime cputime_expires;
 
 	struct list_head cpu_timers[3];
 
@@ -1827,7 +1827,7 @@ struct task_struct {
 	unsigned long min_flt, maj_flt;
 
 #ifdef CONFIG_POSIX_TIMERS
-	struct task_cputime_t cputime_expires;
+	struct task_cputime cputime_expires;
 	struct list_head cpu_timers[3];
 #endif
 
@@ -3607,7 +3607,7 @@ static __always_inline bool need_resched(void)
  * Thread group CPU time accounting.
  */
 void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times);
-void thread_group_cputimer(struct task_struct *tsk, struct task_cputime_t *times);
+void thread_group_cputimer(struct task_struct *tsk, struct task_cputime *times);
 
 static inline void thread_group_cputime_t(struct task_struct *tsk,
 					  struct task_cputime_t *cputime)
