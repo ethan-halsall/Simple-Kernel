@@ -56,6 +56,7 @@ static void irqtime_account_delta(struct irqtime *irqtime, u64 delta,
 void irqtime_account_irq(struct task_struct *curr)
 {
 	struct irqtime *irqtime = this_cpu_ptr(&cpu_irqtime);
+	u64 *cpustat = kcpustat_this_cpu->cpustat;
 	s64 delta;
 	int cpu;
 	u64 wallclock;
@@ -73,10 +74,15 @@ void irqtime_account_irq(struct task_struct *curr)
 	 * in that case, so as not to confuse scheduler with a special task
 	 * that do not consume any time, but still wants to run.
 	 */
-	if (hardirq_count())
-		irqtime_account_delta(irqtime, delta, CPUTIME_IRQ);
-	else if (in_serving_softirq() && curr != this_cpu_ksoftirqd())
-		irqtime_account_delta(irqtime, delta, CPUTIME_SOFTIRQ);
+	if (hardirq_count()) {
+		cpustat[CPUTIME_IRQ] += delta;
+		irqtime->tick_delta += delta;
+	} else if (in_serving_softirq() && curr != this_cpu_ksoftirqd()) {
+		cpustat[CPUTIME_SOFTIRQ] += delta;
+		irqtime->tick_delta += delta;
+	}
+
+	u64_stats_update_end(&irqtime->sync);
 }
 EXPORT_SYMBOL_GPL(irqtime_account_irq);
 
