@@ -85,6 +85,7 @@
 #include <linux/rwsem.h>
 #include <linux/nsproxy.h>
 #include <linux/ipc_namespace.h>
+#include <linux/sched/wake_q.h>
 
 #include <linux/uaccess.h>
 #include "util.h"
