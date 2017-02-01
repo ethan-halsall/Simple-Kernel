@@ -107,7 +107,7 @@ static inline void update_last_busy_time(int cpu, bool dequeue,
 {
 	bool nr_run_trigger = false, load_trigger = false;
 
-	if (!hmp_capable() || is_min_capacity_cpu(cpu))
+	if (!hmp_capable())
 		return;
 
 	if (prev_nr_run >= BUSY_NR_RUN && per_cpu(nr, cpu) < BUSY_NR_RUN)

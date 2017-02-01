@@ -250,6 +250,7 @@ extern int dl_cpuset_cpumask_can_shrink(const struct cpumask *cur,
 extern bool dl_cpu_busy(unsigned int cpu);
 
 extern struct mutex sched_domains_mutex;
+extern void init_dl_bw(struct dl_bw *dl_b);
 
 #ifdef CONFIG_CGROUP_SCHED
 
@@ -621,16 +622,16 @@ static inline bool sched_asym_prefer(int a, int b)
 	return arch_asym_cpu_priority(a) > arch_asym_cpu_priority(b);
 }
 
-struct max_cpu_capacity {
-	raw_spinlock_t lock;
-	unsigned long val;
-	int cpu;
-};
-
 struct perf_domain {
     struct em_perf_domain *em_pd;
     struct perf_domain *next;
     struct rcu_head rcu;
+};
+
+struct max_cpu_capacity {
+	raw_spinlock_t lock;
+	unsigned long val;
+	int cpu;
 };
 
 /* Scheduling group status flags */
@@ -694,9 +695,6 @@ struct root_domain {
 	/* Maximum cpu capacity in the system. */
 	struct max_cpu_capacity max_cpu_capacity;
 
-	/* First cpu with maximum and minimum original capacity */
-	int max_cap_orig_cpu, min_cap_orig_cpu;
-
 	/*
 	 * NULL-terminated list of performance domains intersecting with the
 	 * CPUs of the rd. Protected by RCU.
@@ -706,6 +704,14 @@ struct root_domain {
 };
 
 extern struct root_domain def_root_domain;
+extern void sched_get_rd(struct root_domain *rd);
+extern void sched_put_rd(struct root_domain *rd);
+extern struct mutex sched_domains_mutex;
+
+extern void init_defrootdomain(void);
+extern void init_max_cpu_capacity(struct max_cpu_capacity *mcc);
+extern int sched_init_domains(const struct cpumask *cpu_map);
+extern void rq_attach_root(struct rq *rq, struct root_domain *rd);
 extern void sched_get_rd(struct root_domain *rd);
 extern void sched_put_rd(struct root_domain *rd);
 
@@ -1085,6 +1091,16 @@ extern int sched_max_numa_distance;
 extern bool find_numa_distance(int distance);
 #endif
 
+#ifdef CONFIG_NUMA
+extern void sched_init_numa(void);
+extern void sched_domains_numa_masks_set(unsigned int cpu);
+extern void sched_domains_numa_masks_clear(unsigned int cpu);
+#else
+static inline void sched_init_numa(void) { }
+static inline void sched_domains_numa_masks_set(unsigned int cpu) { }
+static inline void sched_domains_numa_masks_clear(unsigned int cpu) { }
+#endif
+
 #ifdef CONFIG_NUMA_BALANCING
 /* The regions in numa_faults array from task_struct */
 enum numa_faults_stats {
@@ -1181,8 +1197,6 @@ DECLARE_PER_CPU(struct sched_domain_shared *, sd_llc_shared);
 DECLARE_PER_CPU(struct sched_domain *, sd_numa);
 DECLARE_PER_CPU(struct sched_domain *, sd_asym_packing);
 DECLARE_PER_CPU(struct sched_domain *, sd_asym_cpucapacity);
-DECLARE_PER_CPU(struct sched_domain *, sd_ea);
-DECLARE_PER_CPU(struct sched_domain *, sd_scs);
 extern struct static_key_false sched_asym_cpucapacity;
 
 struct sched_group_capacity {
@@ -1191,11 +1205,15 @@ struct sched_group_capacity {
 	 * CPU capacity of this group, SCHED_CAPACITY_SCALE being max capacity
 	 * for a single CPU.
 	 */
-	unsigned long capacity;
-	unsigned long max_capacity; /* Max per-cpu capacity in group */
-	unsigned long min_capacity; /* Min per-CPU capacity in group */
-	unsigned long next_update;
-	int imbalance; /* XXX unrelated to capacity but shared group state */
+	unsigned long		capacity;
+	unsigned long		min_capacity;		/* Min per-CPU capacity in group */
+	unsigned long		max_capacity;		/* Max per-CPU capacity in group */
+	unsigned long		next_update;
+	int			imbalance;		/* XXX unrelated to capacity but shared group state */
+
+#ifdef CONFIG_SCHED_DEBUG
+	int id;
+#endif
 
 	unsigned long cpumask[0]; /* balance mask */
 };
@@ -1225,8 +1243,7 @@ static inline struct cpumask *sched_group_span(struct sched_group *sg)
 }
 
 /*
- * cpumask masking which cpus in the group are allowed to iterate up the domain
- * tree.
+ * See build_balance_mask().
  */
 static inline struct cpumask *group_balance_mask(struct sched_group *sg)
 {
@@ -1246,9 +1263,13 @@ extern int group_balance_cpu(struct sched_group *sg);
 
 #if defined(CONFIG_SCHED_DEBUG) && defined(CONFIG_SYSCTL)
 void register_sched_domain_sysctl(void);
+void dirty_sched_domain_sysctl(int cpu);
 void unregister_sched_domain_sysctl(void);
 #else
 static inline void register_sched_domain_sysctl(void)
+{
+}
+static inline void dirty_sched_domain_sysctl(int cpu)
 {
 }
 static inline void unregister_sched_domain_sysctl(void)
@@ -1939,6 +1960,78 @@ static inline unsigned long capacity_orig_of(int cpu)
 }
 
 /**
+ * enum schedutil_type - CPU utilization type
+ * @FREQUENCY_UTIL:	Utilization used to select frequency
+ * @ENERGY_UTIL:	Utilization used during energy calculation
+ *
+ * The utilization signals of all scheduling classes (CFS/RT/DL) and IRQ time
+ * need to be aggregated differently depending on the usage made of them. This
+ * enum is used within schedutil_freq_util() to differentiate the types of
+ * utilization expected by the callers, and adjust the aggregation accordingly.
+ */
+enum schedutil_type {
+    FREQUENCY_UTIL,
+    ENERGY_UTIL,
+};
+
+#ifdef CONFIG_SMP
+static inline unsigned long cpu_util_cfs(struct rq *rq)
+{
+    unsigned long util = READ_ONCE(rq->cfs.avg.util_avg);
+
+    if (sched_feat(UTIL_EST)) {
+	util = max_t(unsigned long, util,
+	         READ_ONCE(rq->cfs.avg.util_est.enqueued));
+    }
+
+    return util;
+}
+#endif
+
+#ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
+
+unsigned long schedutil_freq_util(int cpu, unsigned long util,
+                  unsigned long max, enum schedutil_type type);
+
+
+static inline unsigned long cpu_bw_dl(struct rq *rq)
+{
+    return (rq->dl.running_bw * SCHED_CAPACITY_SCALE) >> BW_SHIFT;
+}
+
+static inline unsigned long cpu_util_dl(struct rq *rq)
+{
+    return READ_ONCE(rq->avg_dl.util_avg);
+}
+
+static inline unsigned long cpu_util_rt(struct rq *rq)
+{
+    return READ_ONCE(rq->avg_rt.util_avg);
+}
+
+static inline unsigned long cpu_util_freq(int cpu)
+{
+    struct rq *rq = cpu_rq(cpu);
+
+    return min(cpu_util_cfs(rq) + cpu_util_rt(rq), capacity_orig_of(cpu));
+}
+
+static inline unsigned long schedutil_energy_util(int cpu, unsigned long util)
+{
+	unsigned long max = arch_scale_cpu_capacity(NULL, cpu);
+
+	return schedutil_freq_util(cpu, util, max, ENERGY_UTIL);
+}
+
+#else /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
+static inline unsigned long schedutil_energy_util(int cpu, unsigned long cfs)
+{
+	return cfs;
+}
+
+#endif /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
+
+/**
  * Amount of capacity of a CPU that is (estimated to be) used by CFS tasks
  * @cpu: the CPU to get the utilization of
  *
@@ -2167,6 +2260,9 @@ static inline void double_rq_unlock(struct rq *rq1, struct rq *rq2)
  * task_may_not_preempt - check whether a task may not be preemptible soon
  */
 extern bool task_may_not_preempt(struct task_struct *task, int cpu);
+extern void set_rq_online (struct rq *rq);
+extern void set_rq_offline(struct rq *rq);
+extern bool sched_smp_initialized;
 
 #else /* CONFIG_SMP */
 
@@ -2207,6 +2303,8 @@ extern struct sched_entity *__pick_first_entity(struct cfs_rq *cfs_rq);
 extern struct sched_entity *__pick_last_entity(struct cfs_rq *cfs_rq);
 
 #ifdef	CONFIG_SCHED_DEBUG
+extern bool sched_debug_enabled;
+
 extern void print_cfs_stats(struct seq_file *m, int cpu);
 extern void print_rt_stats(struct seq_file *m, int cpu);
 extern void print_dl_stats(struct seq_file *m, int cpu);
@@ -2353,17 +2451,6 @@ static inline void cpufreq_update_util(struct rq *rq, unsigned int flags) {}
 static inline bool hmp_capable(void) { return false; }
 
 static inline bool is_max_capacity_cpu(int cpu) { return true; }
-static inline bool is_min_capacity_cpu(int cpu)
-{
-#ifdef CONFIG_SMP
-    int min_cpu = cpu_rq(cpu)->rd->min_cap_orig_cpu;
-
-    return unlikely(min_cpu == -1) ||
-	capacity_orig_of(cpu) == capacity_orig_of(min_cpu);
-#else
-    return true;
-#endif
-}
 
 static inline bool energy_aware(void)
 {
@@ -2382,10 +2469,6 @@ extern void sched_get_nr_running_avg(struct sched_avg_stats *stats);
 #if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
 #define perf_domain_span(pd) (to_cpumask(((pd)->em_pd->cpus)))
 
-static inline unsigned long cpu_util_rt(struct rq *rq)
-{
-	return READ_ONCE(rq->avg_rt.util_avg);
-}
 
 #else /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
 #define perf_domain_span(pd) NULL
@@ -2429,50 +2512,7 @@ unsigned long scale_irq_capacity(unsigned long util, unsigned long irq, unsigned
 	return util;
 }
 #endif
-#ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
-/**
- * enum schedutil_type - CPU utilization type
- * @FREQUENCY_UTIL:	Utilization used to select frequency
- * @ENERGY_UTIL:	Utilization used during energy calculation
- *
- * The utilization signals of all scheduling classes (CFS/RT/DL) and IRQ time
- * need to be aggregated differently depending on the usage made of them. This
- * enum is used within schedutil_freq_util() to differentiate the types of
- * utilization expected by the callers, and adjust the aggregation accordingly.
- */
-enum schedutil_type {
-	FREQUENCY_UTIL,
-	ENERGY_UTIL,
-};
 
-unsigned long schedutil_freq_util(int cpu, unsigned long util,
-	              unsigned long max, enum schedutil_type type);
-
-static inline unsigned long schedutil_energy_util(int cpu, unsigned long util)
-{
-	unsigned long max = arch_scale_cpu_capacity(NULL, cpu);
-
-	return schedutil_freq_util(cpu, util, max, ENERGY_UTIL);
-}
-#endif /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
-static inline unsigned long cpu_bw_dl(struct rq *rq)
-{
-	return (rq->dl.running_bw * SCHED_CAPACITY_SCALE) >> BW_SHIFT;
-}
-
-static inline unsigned long cpu_util_dl(struct rq *rq)
-{
-	return READ_ONCE(rq->avg_dl.util_avg);
-}
-
-static inline unsigned long cpu_util_cfs(struct rq *rq)
-{
-	unsigned long util = READ_ONCE(rq->cfs.avg.util_avg);
-
-	if (sched_feat(UTIL_EST)) {
-		util = max_t(unsigned long, util,
-				READ_ONCE(rq->cfs.avg.util_est.enqueued));
-	}
-
-	return util;
-}
+#ifdef CONFIG_SMP
+extern struct static_key_false sched_energy_present;
+#endif
