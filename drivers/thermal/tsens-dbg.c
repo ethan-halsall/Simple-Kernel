@@ -12,6 +12,7 @@
  */
 
 #include <asm/arch_timer.h>
+#include <linux/sched/clock.h>
 #include <linux/platform_device.h>
 #include "tsens.h"
 #include "tsens-mtc.h"

@@ -15,6 +15,7 @@
 #include <linux/log2.h>
 #include <linux/time.h>
 #include <linux/delay.h>
+#include <linux/sched/clock.h>
 
 #include "kgsl.h"
 #include "kgsl_sharedmem.h"

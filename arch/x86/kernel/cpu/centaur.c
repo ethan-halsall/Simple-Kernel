@@ -1,6 +1,9 @@
 #include <linux/bitops.h>
 #include <linux/kernel.h>
 
+#include <linux/sched.h>
+#include <linux/sched/clock.h>
+
 #include <asm/cpufeature.h>
 #include <asm/e820.h>
 #include <asm/mtrr.h>

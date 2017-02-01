@@ -5,6 +5,7 @@
 #define _TRACE_CPUHP_H
 
 #include <linux/tracepoint.h>
+#include <linux/sched/clock.h>
 
 TRACE_EVENT(cpuhp_enter,
 

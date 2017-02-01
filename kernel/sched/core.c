@@ -81,6 +81,8 @@
 #include <linux/cgroup-defs.h>
 #include <linux/mutex.h>
 #include <linux/sched/isolation.h>
+#include <linux/sched.h>
+#include <linux/sched/clock.h>
 
 #include <asm/switch_to.h>
 #include <asm/tlb.h>

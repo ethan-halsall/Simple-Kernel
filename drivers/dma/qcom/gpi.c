@@ -35,6 +35,7 @@
 #include <linux/vmalloc.h>
 #include <asm/cacheflush.h>
 #include <linux/msm_gpi.h>
+#include <linux/sched/clock.h>
 #include "../dmaengine.h"
 #include "../virt-dma.h"
 #include "msm_gpi_mmio.h"

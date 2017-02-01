@@ -23,6 +23,8 @@
  */
 
 #include <linux/prefetch.h>
+#include <linux/sched.h>
+#include <linux/sched/clock.h>
 
 #include "i915_drv.h"
 
