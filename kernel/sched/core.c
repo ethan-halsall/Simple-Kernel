@@ -5433,6 +5433,9 @@ void sched_show_task(struct task_struct *p)
 	unsigned long free = 0;
 	int ppid;
 
+	/* Make sure the string lines up properly with the number of task states: */
+	BUILD_BUG_ON(sizeof(TASK_STATE_TO_CHAR_STR)-1 != ilog2(TASK_STATE_MAX)+1);
+
 	if (!try_get_task_stack(p))
 		return;
 
