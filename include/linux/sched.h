@@ -177,14 +177,6 @@ static inline int sched_set_wake_up_idle(struct task_struct *p,
 
 extern void calc_global_load(unsigned long ticks);
 
-#if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
-extern void cpu_load_update_nohz_start(void);
-extern void cpu_load_update_nohz_stop(void);
-#else
-static inline void cpu_load_update_nohz_start(void) { }
-static inline void cpu_load_update_nohz_stop(void) { }
-#endif
-
 extern void dump_cpu_task(int cpu);
 
 struct seq_file;
@@ -389,13 +381,6 @@ extern void init_idle_bootup_task(struct task_struct *idle);
 extern cpumask_var_t cpu_isolated_map;
 
 extern int runqueue_is_locked(int cpu);
-
-#if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
-extern void nohz_balance_enter_idle(int cpu);
-extern int get_nohz_timer_target(void);
-#else
-static inline void nohz_balance_enter_idle(int cpu) { }
-#endif
 
 /*
  * Only dump TASK_* tasks. (0 for all tasks)
@@ -2729,14 +2714,6 @@ static inline int sched_update_freq_max_load(const cpumask_t *cpumask)
 	return 0;
 }
 
-#ifdef CONFIG_NO_HZ_COMMON
-void calc_load_enter_idle(void);
-void calc_load_exit_idle(void);
-#else
-static inline void calc_load_enter_idle(void) { }
-static inline void calc_load_exit_idle(void) { }
-#endif /* CONFIG_NO_HZ_COMMON */
-
 static inline void set_wake_up_idle(bool enabled)
 {
 	if (enabled)
@@ -2763,16 +2740,6 @@ extern void sched_exec(void);
 extern void idle_task_exit(void);
 #else
 static inline void idle_task_exit(void) {}
-#endif
-
-#if defined(CONFIG_NO_HZ_COMMON) && defined(CONFIG_SMP)
-extern void wake_up_nohz_cpu(int cpu);
-#else
-static inline void wake_up_nohz_cpu(int cpu) { }
-#endif
-
-#ifdef CONFIG_NO_HZ_FULL
-extern u64 scheduler_tick_max_deferment(void);
 #endif
 
 #ifdef CONFIG_SCHED_AUTOGROUP
