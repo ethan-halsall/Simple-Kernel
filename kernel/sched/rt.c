@@ -1494,7 +1494,7 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 	 * Current can't be migrated, useless to reschedule,
 	 * let's hope p can move out.
 	 */
-	if (tsk_nr_cpus_allowed(rq->curr) == 1 ||
+	if (rq->curr->nr_cpus_allowed == 1 ||
 	    !cpupri_find(&rq->rd->cpupri, rq->curr, NULL))
 		return;
 
@@ -1502,7 +1502,7 @@ static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
 	 * p is migratable, so let's not schedule it and
 	 * see if it is pushed or pulled somewhere else.
 	 */
-	if (tsk_nr_cpus_allowed(p) != 1
+	if (p->nr_cpus_allowed != 1
 	    && cpupri_find(&rq->rd->cpupri, p, NULL))
 		return;
 
@@ -2208,9 +2208,9 @@ static void task_woken_rt(struct rq *rq, struct task_struct *p)
 {
 	if (!task_running(rq, p) &&
 	    !test_tsk_need_resched(rq->curr) &&
-	    tsk_nr_cpus_allowed(p) > 1 &&
+	    p->nr_cpus_allowed > 1 &&
 	    (dl_task(rq->curr) || rt_task(rq->curr)) &&
-	    (tsk_nr_cpus_allowed(rq->curr) < 2 ||
+	    (rq->curr->nr_cpus_allowed < 2 ||
 	     rq->curr->prio <= p->prio))
 		push_rt_tasks(rq);
 }
@@ -2283,7 +2283,7 @@ static void switched_to_rt(struct rq *rq, struct task_struct *p)
 	 */
 	if (task_on_rq_queued(p) && rq->curr != p) {
 #ifdef CONFIG_SMP
-		if (tsk_nr_cpus_allowed(p) > 1 && rq->rt.overloaded)
+		if (p->nr_cpus_allowed > 1 && rq->rt.overloaded)
 			queue_push_tasks(rq);
 #endif /* CONFIG_SMP */
 		if (p->prio < rq->curr->prio && cpu_online(cpu_of(rq)))
