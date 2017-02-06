@@ -72,6 +72,7 @@
 #include <linux/slab.h>
 #include <linux/init_task.h>
 #include <linux/context_tracking.h>
+#include <linux/rcupdate_wait.h>
 #include <linux/compiler.h>
 #include <linux/frame.h>
 #include <linux/prefetch.h>

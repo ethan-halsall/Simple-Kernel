@@ -50,6 +50,7 @@
 #include <linux/kthread.h>
 #include <linux/tick.h>
 #include <linux/sched/isolation.h>
+#include <linux/rcupdate_wait.h>
 
 #define CREATE_TRACE_POINTS
 
