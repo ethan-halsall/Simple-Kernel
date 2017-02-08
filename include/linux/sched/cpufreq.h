@@ -1,7 +1,7 @@
 #ifndef _LINUX_SCHED_CPUFREQ_H
 #define _LINUX_SCHED_CPUFREQ_H
 
-#include <linux/sched.h>
+#include <linux/types.h>
 
 static inline unsigned long task_rlimit(const struct task_struct *tsk,
 		unsigned int limit)
