@@ -6,6 +6,7 @@
 #include <linux/sched/cpufreq.h>
 #include <linux/sched/clock.h>
 #include <linux/sched/wake_q.h>
+#include <linux/sched/nohz.h>
 #include <linux/u64_stats_sync.h>
 #include <linux/sched/deadline.h>
 #include <linux/kernel_stat.h>
