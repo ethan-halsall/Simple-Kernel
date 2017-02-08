@@ -10474,7 +10474,7 @@ more_balance:
 		 * Set loop_max when rq's lock is taken to prevent a race.
 		 */
 		env.loop_max = min(sysctl_sched_nr_migrate,
-							busiest->nr_running);
+							busiest->cfs.h_nr_running);
 
 		/*
 		 * cur_ld_moved - load moved in current iteration
