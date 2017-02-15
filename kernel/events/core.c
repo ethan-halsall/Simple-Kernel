@@ -3623,6 +3623,8 @@ static void perf_event_enable_on_exec(int ctxn)
 	if (enabled) {
 		clone_ctx = unclone_ctx(ctx);
 		ctx_resched(cpuctx, ctx, event_type);
+	} else {
+		ctx_sched_in(ctx, cpuctx, EVENT_TIME, current);
 	}
 	perf_ctx_unlock(cpuctx, ctx);
 
