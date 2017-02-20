@@ -323,7 +323,7 @@ static int etb_set_buffer(struct coresight_device *csdev,
 
 static unsigned long etb_reset_buffer(struct coresight_device *csdev,
 				      struct perf_output_handle *handle,
-				      void *sink_config, bool *lost)
+				      void *sink_config)
 {
 	unsigned long size = 0;
 	struct cs_buffers *buf = sink_config;
@@ -345,7 +345,6 @@ static unsigned long etb_reset_buffer(struct coresight_device *csdev,
 		 * resetting parameters here and squaring off with the ring
 		 * buffer API in the tracer PMU is fine.
 		 */
-		*lost = !!local_xchg(&buf->lost, 0);
 		size = local_xchg(&buf->data_size, 0);
 	}
 
@@ -387,7 +386,7 @@ static void etb_update_buffer(struct coresight_device *csdev,
 			(unsigned long)write_ptr);
 
 		write_ptr &= ~(ETB_FRAME_SIZE_WORDS - 1);
-		local_inc(&buf->lost);
+		perf_aux_output_flag(handle, PERF_AUX_FLAG_TRUNCATED);
 	}
 
 	/*
@@ -398,7 +397,7 @@ static void etb_update_buffer(struct coresight_device *csdev,
 	 */
 	status = readl_relaxed(drvdata->base + ETB_STATUS_REG);
 	if (status & ETB_STATUS_RAM_FULL) {
-		local_inc(&buf->lost);
+		perf_aux_output_flag(handle, PERF_AUX_FLAG_TRUNCATED);
 		to_read = capacity;
 		read_ptr = write_ptr;
 	} else {
@@ -431,7 +430,7 @@ static void etb_update_buffer(struct coresight_device *csdev,
 		if (read_ptr > (drvdata->buffer_depth - 1))
 			read_ptr -= drvdata->buffer_depth;
 		/* let the decoder know we've skipped ahead */
-		local_inc(&buf->lost);
+		perf_aux_output_flag(handle, PERF_AUX_FLAG_TRUNCATED);
 	}
 
 	/* finally tell HW where we want to start reading from */

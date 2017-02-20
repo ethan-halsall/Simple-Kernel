@@ -83,7 +83,6 @@ struct coresight_csr {
  * @nr_pages:	max number of pages granted to us
  * @offset:	offset within the current buffer
  * @data_size:	how much we collected in this run
- * @lost:	other than zero if we had a HW buffer wrap around
  * @snapshot:	is this run in snapshot mode
  * @data_pages:	a handle the ring buffer
  */
@@ -92,7 +91,6 @@ struct cs_buffers {
 	unsigned int		nr_pages;
 	unsigned long		offset;
 	local_t			data_size;
-	local_t			lost;
 	bool			snapshot;
 	void			**data_pages;
 };
