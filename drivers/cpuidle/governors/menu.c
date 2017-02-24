@@ -273,6 +273,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	unsigned int interactivity_req;
 	unsigned int expected_interval;
 	unsigned long nr_iowaiters;
+	int resume_latency = dev_pm_qos_raw_read_value(device);
 
 	if (data->needs_update) {
 		menu_update(drv, dev);
