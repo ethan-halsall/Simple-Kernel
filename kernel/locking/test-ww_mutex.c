@@ -353,8 +353,8 @@ static int test_cycle(unsigned int ncpus)
 struct stress {
 	struct work_struct work;
 	struct ww_mutex *locks;
+	unsigned long timeout;
 	int nlocks;
-	int nloops;
 };
 
 static int *get_random_order(int count)
@@ -433,7 +433,9 @@ retry:
 				    __func__, err);
 			break;
 		}
-	} while (--stress->nloops);
+
+		ww_acquire_fini(&ctx);
+	} while (!time_after(jiffies, stress->timeout));
 
 	ww_acquire_fini(&ctx);
 
@@ -495,7 +497,9 @@ static void stress_reorder_work(struct work_struct *work)
 		dummy_load(stress);
 		list_for_each_entry(ll, &locks, link)
 			ww_mutex_unlock(ll->lock);
-	} while (--stress->nloops);
+
+		ww_acquire_fini(&ctx);
+	} while (!time_after(jiffies, stress->timeout));
 
 	ww_acquire_fini(&ctx);
 
@@ -523,7 +527,7 @@ static void stress_one_work(struct work_struct *work)
 				    __func__, err);
 			break;
 		}
-	} while (--stress->nloops);
+	} while (!time_after(jiffies, stress->timeout));
 
 	kfree(stress);
 }
@@ -533,7 +537,7 @@ static void stress_one_work(struct work_struct *work)
 #define STRESS_ONE BIT(2)
 #define STRESS_ALL (STRESS_INORDER | STRESS_REORDER | STRESS_ONE)
 
-static int stress(int nlocks, int nthreads, int nloops, unsigned int flags)
+static int stress(int nlocks, int nthreads, unsigned int flags)
 {
 	struct ww_mutex *locks;
 	int n;
@@ -575,7 +579,7 @@ static int stress(int nlocks, int nthreads, int nloops, unsigned int flags)
 		INIT_WORK(&stress->work, fn);
 		stress->locks = locks;
 		stress->nlocks = nlocks;
-		stress->nloops = nloops;
+		stress->timeout = jiffies + 2*HZ;
 
 		queue_work(wq, &stress->work);
 		nthreads--;
@@ -619,15 +623,15 @@ static int __init test_ww_mutex_init(void)
 	if (ret)
 		return ret;
 
-	ret = stress(16, 2*ncpus, 1<<10, STRESS_INORDER);
+	ret = stress(16, 2*ncpus, STRESS_INORDER);
 	if (ret)
 		return ret;
 
-	ret = stress(16, 2*ncpus, 1<<10, STRESS_REORDER);
+	ret = stress(16, 2*ncpus, STRESS_REORDER);
 	if (ret)
 		return ret;
 
-	ret = stress(4096, hweight32(STRESS_ALL)*ncpus, 1<<12, STRESS_ALL);
+	ret = stress(4095, hweight32(STRESS_ALL)*ncpus, STRESS_ALL);
 	if (ret)
 		return ret;
 
