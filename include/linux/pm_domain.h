@@ -50,6 +50,7 @@ struct genpd_lock_ops;
 struct dev_pm_opp;
 
 struct generic_pm_domain {
+	struct device dev;
 	struct dev_pm_domain domain;	/* PM domain operations */
 	struct list_head gpd_list_node;	/* Node in the global PM domains list */
 	struct list_head master_links;	/* Links with PM domain as a master */
