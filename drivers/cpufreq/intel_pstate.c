@@ -41,6 +41,7 @@
 #define ATOM_VIDS		0x66b
 #define ATOM_TURBO_RATIOS	0x66c
 #define ATOM_TURBO_VIDS		0x66d
+#define INTEL_CPUFREQ_TRANSITION_DELAY		500
 
 #ifdef CONFIG_ACPI
 #include <acpi/processor.h>
@@ -1653,6 +1654,7 @@ static int intel_pstate_cpu_init(struct cpufreq_policy *policy)
 
 	intel_pstate_init_acpi_perf_limits(policy);
 	policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
+	policy->transition_delay_us = INTEL_CPUFREQ_TRANSITION_DELAY;
 	cpumask_set_cpu(policy->cpu, policy->cpus);
 
 	return 0;
