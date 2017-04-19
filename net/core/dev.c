@@ -3595,6 +3595,7 @@ EXPORT_SYMBOL(netdev_max_backlog);
 int netdev_tstamp_prequeue __read_mostly = 1;
 int netdev_budget __read_mostly = 300;
 int weight_p __read_mostly = 64;            /* old backlog weight */
+unsigned int __read_mostly netdev_budget_usecs = 2000;
 
 /* Called with irq disabled */
 static inline void ____napi_schedule(struct softnet_data *sd,
@@ -5431,7 +5432,8 @@ out_unlock:
 static __latent_entropy void net_rx_action(struct softirq_action *h)
 {
 	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
-	unsigned long time_limit = jiffies + 2;
+	unsigned long time_limit = jiffies +
+		usecs_to_jiffies(netdev_budget_usecs);
 	int budget = netdev_budget;
 	LIST_HEAD(list);
 	LIST_HEAD(repoll);
