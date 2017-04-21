@@ -285,7 +285,7 @@ static void set_cyc2ns_scale(unsigned long khz, int cpu)
 	cyc2ns_write_end(cpu, data);
 
 done:
-	sched_clock_idle_wakeup_event(0);
+	sched_clock_idle_wakeup_event();
 	local_irq_restore(flags);
 }
 /*
