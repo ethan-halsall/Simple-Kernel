@@ -32,6 +32,22 @@ static int dbx500_cpufreq_init(struct cpufreq_policy *policy)
 	return cpufreq_generic_init(policy, freq_table, 20 * 1000);
 }
 
+static int dbx500_cpufreq_exit(struct cpufreq_policy *policy)
+{
+	if (!IS_ERR(cdev))
+		cpufreq_cooling_unregister(cdev);
+	return 0;
+}
+
+static void dbx500_cpufreq_ready(struct cpufreq_policy *policy)
+{
+	cdev = cpufreq_cooling_register(policy);
+	if (IS_ERR(cdev))
+		pr_err("Failed to register cooling device %ld\n", PTR_ERR(cdev));
+	else
+		pr_info("Cooling device registered: %s\n", cdev->type);
+}
+
 static struct cpufreq_driver dbx500_cpufreq_driver = {
 	.flags  = CPUFREQ_STICKY | CPUFREQ_CONST_LOOPS |
 			CPUFREQ_NEED_INITIAL_FREQ_CHECK,
