@@ -336,6 +336,7 @@ extern rwlock_t tasklist_lock;
 extern spinlock_t mmlist_lock;
 
 struct task_struct;
+struct rusage;
 
 #ifdef CONFIG_PROVE_RCU
 extern int lockdep_tasklist_lock_is_held(void);
@@ -3110,6 +3111,7 @@ extern long _do_fork(unsigned long, unsigned long, unsigned long, int __user *, 
 extern long do_fork(unsigned long, unsigned long, unsigned long, int __user *, int __user *);
 struct task_struct *fork_idle(int);
 extern pid_t kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);
+extern long kernel_wait4(pid_t, int *, int, struct rusage *);
 
 extern void __set_task_comm(struct task_struct *tsk, const char *from, bool exec);
 static inline void set_task_comm(struct task_struct *tsk, const char *from)
