@@ -1175,6 +1175,8 @@ static enum hrtimer_restart tick_sched_timer(struct hrtimer *timer)
 			 */
 			wakeup_user();
 		}
+	} else {
+		ts->next_tick = 0;
 	}
 
 	/* No need to reprogram if we are in idle or full dynticks mode */
