@@ -1589,16 +1589,16 @@ static void check_preempt_equal_dl(struct rq *rq, struct task_struct *p)
 	 * Current can't be migrated, useless to reschedule,
 	 * let's hope p can move out.
 	 */
-	if (tsk_nr_cpus_allowed(rq->curr) == 1 ||
-	    cpudl_find(&rq->rd->cpudl, rq->curr, NULL) == -1)
+	if (rq->curr->nr_cpus_allowed == 1 ||
+	    !cpudl_find(&rq->rd->cpudl, rq->curr, NULL))
 		return;
 
 	/*
 	 * p is migratable, so let's not schedule it and
 	 * see if it is pushed or pulled somewhere else.
 	 */
-	if (tsk_nr_cpus_allowed(p) != 1 &&
-	    cpudl_find(&rq->rd->cpudl, p, NULL) != -1)
+	if (p->nr_cpus_allowed != 1 &&
+	    cpudl_find(&rq->rd->cpudl, p, NULL))
 		return;
 
 	resched_curr(rq);
@@ -1813,7 +1813,7 @@ static int find_later_rq(struct task_struct *task)
 	 * We have to consider system topology and task affinity
 	 * first, then we can look for a suitable cpu.
 	 */
-	if (cpudl_find(&task_rq(task)->rd->cpudl, task, later_mask) == -1)
+	if (!cpudl_find(&task_rq(task)->rd->cpudl, task, later_mask))
 		return -1;
 
 	/*
