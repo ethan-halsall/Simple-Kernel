@@ -822,7 +822,7 @@ void post_init_entity_util_avg(struct sched_entity *se)
 			/*
 			 * For !fair tasks do:
 			 *
-			update_cfs_rq_load_avg(now, cfs_rq, false);
+			update_cfs_rq_load_avg(now, cfs_rq);
 			attach_entity_load_avg(cfs_rq, se);
 			switched_from_fair(rq, p);
 			 *
@@ -3479,7 +3479,7 @@ static inline int per_task_boost(struct task_struct *p)
  * call update_tg_load_avg() when this function returns true.
  */
 static inline int
-update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
+update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq)
 {
 	unsigned long removed_load = 0, removed_util = 0, removed_runnable_sum = 0;
 	struct sched_avg *sa = &cfs_rq->avg;
@@ -3516,7 +3516,7 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 	cfs_rq->load_last_update_time_copy = sa->last_update_time;
 #endif
 
-	if (update_freq && decayed )
+	if (decayed)
 		cfs_rq_util_change(cfs_rq);
 
 	/* Trace CPU load, unless cfs_rq belongs to a non-root task_group */
@@ -3615,7 +3615,7 @@ static inline void update_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *s
 	if (se->avg.last_update_time && !(flags & SKIP_AGE_LOAD))
 		__update_load_avg_se(now, cpu, cfs_rq, se);
 
-	decayed  = update_cfs_rq_load_avg(now, cfs_rq, true);
+	decayed  = update_cfs_rq_load_avg(now, cfs_rq);
 	decayed |= propagate_entity_load_avg(se);
 
 	if (!se->avg.last_update_time && (flags & DO_ATTACH)) {
@@ -9134,7 +9134,7 @@ static void update_blocked_averages(int cpu)
 		if (throttled_hierarchy(cfs_rq))
 			continue;
 
-		if (update_cfs_rq_load_avg(cfs_rq_clock_task(cfs_rq), cfs_rq, true))
+		if (update_cfs_rq_load_avg(cfs_rq_clock_task(cfs_rq), cfs_rq))
 			update_tg_load_avg(cfs_rq, 0);
 
 		/* Propagate pending load changes to the parent, if any: */
@@ -9206,7 +9206,7 @@ static inline void update_blocked_averages(int cpu)
 
 	raw_spin_lock_irqsave(&rq->lock, flags);
 	update_rq_clock(rq);
-	update_cfs_rq_load_avg(cfs_rq_clock_task(cfs_rq), cfs_rq, true);
+	update_cfs_rq_load_avg(cfs_rq_clock_task(cfs_rq), cfs_rq);
 	update_rt_rq_load_avg(rq_clock_task(rq), rq, 0);
 	update_dl_rq_load_avg(rq_clock_task(rq), rq, 0);
 	update_irq_load_avg(rq, 0);
