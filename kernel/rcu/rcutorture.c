@@ -661,8 +661,6 @@ static struct rcu_torture_ops sched_ops = {
 	.name		= "sched"
 };
 
-#ifdef CONFIG_TASKS_RCU
-
 /*
  * Definitions for RCU-tasks torture testing.
  */
@@ -700,23 +698,10 @@ static struct rcu_torture_ops tasks_ops = {
 	.name		= "tasks"
 };
 
-#define RCUTORTURE_TASKS_OPS &tasks_ops,
-
 static bool __maybe_unused torturing_tasks(void)
 {
 	return cur_ops == &tasks_ops;
 }
-
-#else /* #ifdef CONFIG_TASKS_RCU */
-
-#define RCUTORTURE_TASKS_OPS
-
-static bool __maybe_unused torturing_tasks(void)
-{
-	return false;
-}
-
-#endif /* #else #ifdef CONFIG_TASKS_RCU */
 
 /*
  * RCU torture priority-boost testing.  Runs one real-time thread per
@@ -1732,7 +1717,7 @@ rcu_torture_init(void)
 	int firsterr = 0;
 	static struct rcu_torture_ops *torture_ops[] = {
 		&rcu_ops, &rcu_bh_ops, &rcu_busted_ops, &srcu_ops, &srcud_ops,
-		&sched_ops, RCUTORTURE_TASKS_OPS
+		&sched_ops, &tasks_ops,
 	};
 
 	if (!torture_init_begin(torture_type, verbose, &torture_runnable))

@@ -117,8 +117,6 @@ do {									\
  * See the description of call_rcu() for more detailed information on
  * memory ordering guarantees.
  */
-void call_rcu_tasks(struct rcu_head *head, rcu_callback_t func);
-void synchronize_rcu_tasks(void);
 void rcu_barrier_tasks(void);
 
 #ifdef CONFIG_PREEMPT_RCU
@@ -235,10 +233,14 @@ extern struct srcu_struct tasks_rcu_exit_srcu;
 		rcu_all_qs(); \
 		rcu_note_voluntary_context_switch_lite(t); \
 	} while (0)
+void call_rcu_tasks(struct rcu_head *head, rcu_callback_t func);
+void synchronize_rcu_tasks(void);
 #else /* #ifdef CONFIG_TASKS_RCU */
 #define TASKS_RCU(x) do { } while (0)
 #define rcu_note_voluntary_context_switch_lite(t)	do { } while (0)
 #define rcu_note_voluntary_context_switch(t)		rcu_all_qs()
+#define call_rcu_tasks call_rcu_sched
+#define synchronize_rcu_tasks synchronize_sched
 #endif /* #else #ifdef CONFIG_TASKS_RCU */
 
 /**
