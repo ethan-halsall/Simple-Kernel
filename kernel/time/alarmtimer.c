@@ -43,9 +43,13 @@ static struct alarm_base {
 	clockid_t		base_clockid;
 } alarm_bases[ALARM_NUMTYPE];
 
-/* freezer delta & lock used to handle clock_nanosleep triggered wakeups */
+#if defined(CONFIG_POSIX_TIMERS) || defined(CONFIG_RTC_CLASS)
+/* freezer information to handle clock_nanosleep triggered wakeups */
+static enum alarmtimer_type freezer_alarmtype;
+static ktime_t freezer_expires;
 static ktime_t freezer_delta;
 static DEFINE_SPINLOCK(freezer_delta_lock);
+#endif
 
 static struct wakeup_source *ws;
 
@@ -474,32 +478,15 @@ EXPORT_SYMBOL_GPL(alarm_forward_now);
 
 static void alarmtimer_freezerset(ktime_t absexp, enum alarmtimer_type type)
 {
-	struct alarm_base *base;
-	unsigned long flags;
 	ktime_t delta;
-
-	switch(type) {
-	case ALARM_REALTIME:
-		base = &alarm_bases[ALARM_REALTIME];
-		type = ALARM_REALTIME_FREEZER;
-		break;
-	case ALARM_BOOTTIME:
-		base = &alarm_bases[ALARM_BOOTTIME];
-		type = ALARM_BOOTTIME_FREEZER;
-		break;
-	default:
-		WARN_ONCE(1, "Invalid alarm type: %d\n", type);
-		return;
-	}
+	unsigned long flags;
+	struct alarm_base *base = &alarm_bases[type];
 
 	delta = ktime_sub(absexp, base->gettime());
 
 	spin_lock_irqsave(&freezer_delta_lock, flags);
-	if (!freezer_delta || (delta < freezer_delta)) {
+	if (!freezer_delta || (delta < freezer_delta))
 		freezer_delta = delta;
-		freezer_expires = absexp;
-		freezer_alarmtype = type;
-	}
 	spin_unlock_irqrestore(&freezer_delta_lock, flags);
 }
 
