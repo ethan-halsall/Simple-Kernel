@@ -298,12 +298,9 @@ static void schedule_next_timer(struct k_itimer *timr)
 	if (timr->it.real.interval == 0)
 		return;
 
-	timr->it_overrun += hrtimer_forward(timer, timer->base->get_time(),
-					    timr->it.real.interval);
-
-	timr->it_overrun_last = timr->it_overrun;
-	timr->it_overrun = -1LL;
-	++timr->it_requeue_pending;
+	timr->it_overrun += (unsigned int) hrtimer_forward(timer,
+						timer->base->get_time(),
+						timr->it.real.interval);
 	hrtimer_restart(timer);
 }
 
@@ -324,18 +321,23 @@ void do_schedule_next_timer(struct siginfo *info)
 	unsigned long flags;
 
 	timr = lock_timer(info->si_tid, &flags);
+	if (!timr)
+		return;
 
-	if (timr && timr->it_requeue_pending == info->si_sys_private) {
+	if (timr->it_requeue_pending == info->si_sys_private) {
 		if (timr->it_clock < 0)
 			posix_cpu_timer_schedule(timr);
 		else
 			schedule_next_timer(timr);
 
-		info->si_overrun = timer_overrun_to_int(timr, info->si_overrun);
+		timr->it_overrun_last = timr->it_overrun;
+		timr->it_overrun = -1;
+		++timr->it_requeue_pending;
+
+		info->si_overrun += timr->it_overrun_last;
 	}
 
-	if (timr)
-		unlock_timer(timr, flags);
+	unlock_timer(timr, flags);
 }
 
 int posix_timer_event(struct k_itimer *timr, int si_private)
