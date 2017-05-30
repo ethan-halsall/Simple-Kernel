@@ -534,7 +534,8 @@ SYSCALL_DEFINE3(timer_create, const clockid_t, which_clock,
 	it_id_set = IT_ID_SET;
 	new_timer->it_id = (timer_t) new_timer_id;
 	new_timer->it_clock = which_clock;
-	new_timer->it_overrun = -1LL;
+	new_timer->kclock = kc;
+	new_timer->it_overrun = -1;
 
 	if (timer_event_spec) {
 		if (copy_from_user(&event, timer_event_spec, sizeof (event))) {
@@ -694,7 +695,7 @@ SYSCALL_DEFINE2(timer_gettime, timer_t, timer_id,
 	if (!timr)
 		return -EINVAL;
 
-	kc = clockid_to_kclock(timr->it_clock);
+	kc = timr->kclock;
 	if (WARN_ON_ONCE(!kc || !kc->timer_get))
 		ret = -EINVAL;
 	else
@@ -813,7 +814,7 @@ retry:
 	if (!timr)
 		return -EINVAL;
 
-	kc = clockid_to_kclock(timr->it_clock);
+	kc = timr->kclock;
 	if (WARN_ON_ONCE(!kc || !kc->timer_set))
 		error = -EINVAL;
 	else
@@ -844,7 +845,7 @@ static int common_timer_del(struct k_itimer *timer)
 
 static inline int timer_delete_hook(struct k_itimer *timer)
 {
-	const struct k_clock *kc = clockid_to_kclock(timer->it_clock);
+	const struct k_clock *kc = timer->kclock;
 
 	if (WARN_ON_ONCE(!kc || !kc->timer_del))
 		return -EINVAL;
