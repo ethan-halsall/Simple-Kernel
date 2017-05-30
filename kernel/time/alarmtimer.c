@@ -28,6 +28,10 @@
 #include <linux/freezer.h>
 #include <linux/delay.h>
 
+#include "posix-timers.h"
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/alarmtimer.h>
 
 /**
  * struct alarm_base - Alarm timer bases
