@@ -38,6 +38,7 @@
 #include <linux/compiler.h>
 #include <linux/oom.h>
 #include <linux/capability.h>
+#include <linux/posix-timers.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/signal.h>
