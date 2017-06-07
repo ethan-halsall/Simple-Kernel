@@ -1045,11 +1045,8 @@ SYSCALL_DEFINE2(clock_getres, const clockid_t, which_clock,
  * nanosleep for monotonic and realtime clocks
  */
 static int common_nsleep(const clockid_t which_clock, int flags,
-			 struct timespec64 *tsave, struct timespec __user *rmtp)
+			 struct timespec64 *tsave)
 {
-	if (flags & TIMER_ABSTIME)
-		rmtp = NULL;
-	current->restart_block.nanosleep.rmtp = rmtp;
 	return hrtimer_nanosleep(tsave, flags & TIMER_ABSTIME ?
 				 HRTIMER_MODE_ABS : HRTIMER_MODE_REL,
 				 which_clock);
@@ -1074,8 +1071,11 @@ SYSCALL_DEFINE4(clock_nanosleep, const clockid_t, which_clock, int, flags,
 	t64 = timespec_to_timespec64(t);
 	if (!timespec64_valid(&t64))
 		return -EINVAL;
+	if (flags & TIMER_ABSTIME)
+		rmtp = NULL;
+	current->restart_block.nanosleep.rmtp = rmtp;
 
-	return kc->nsleep(which_clock, flags, &t64, rmtp);
+	return kc->nsleep(which_clock, flags, &t64);
 }
 
 /*

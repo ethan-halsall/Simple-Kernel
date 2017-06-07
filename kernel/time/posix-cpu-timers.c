@@ -1349,15 +1349,10 @@ static int do_cpu_nanosleep(const clockid_t which_clock, int flags,
 static long posix_cpu_nsleep_restart(struct restart_block *restart_block);
 
 static int posix_cpu_nsleep(const clockid_t which_clock, int flags,
-			    struct timespec64 *rqtp, struct timespec __user *rmtp)
+			    struct timespec64 *rqtp)
 {
 	struct restart_block *restart_block = &current->restart_block;
 	int error;
-
-	if (flags & TIMER_ABSTIME)
-		rmtp = NULL;
-
-	restart_block->nanosleep.rmtp = rmtp;
 
 	/*
 	 * Diagnose required errors first.
@@ -1409,10 +1404,9 @@ static int process_cpu_timer_create(struct k_itimer *timer)
 	return posix_cpu_timer_create(timer);
 }
 static int process_cpu_nsleep(const clockid_t which_clock, int flags,
-			      struct timespec64 *rqtp,
-			      struct timespec __user *rmtp)
+			      struct timespec64 *rqtp)
 {
-	return posix_cpu_nsleep(PROCESS_CLOCK, flags, rqtp, rmtp);
+	return posix_cpu_nsleep(PROCESS_CLOCK, flags, rqtp);
 }
 static long process_cpu_nsleep_restart(struct restart_block *restart_block)
 {
