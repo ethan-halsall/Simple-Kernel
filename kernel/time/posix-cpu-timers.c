@@ -1407,10 +1407,6 @@ static int process_cpu_nsleep(const clockid_t which_clock, int flags,
 {
 	return posix_cpu_nsleep(PROCESS_CLOCK, flags, rqtp);
 }
-static long process_cpu_nsleep_restart(struct restart_block *restart_block)
-{
-	return -EINVAL;
-}
 static int thread_cpu_clock_getres(const clockid_t which_clock,
 				   struct timespec64 *tp)
 {
@@ -1433,7 +1429,6 @@ const struct k_clock clock_posix_cpu = {
 	.clock_get	= posix_cpu_clock_get,
 	.timer_create	= posix_cpu_timer_create,
 	.nsleep		= posix_cpu_nsleep,
-	.nsleep_restart	= posix_cpu_nsleep_restart,
 	.timer_set	= posix_cpu_timer_set,
 	.timer_del	= posix_cpu_timer_del,
 	.timer_get	= posix_cpu_timer_get,
@@ -1445,7 +1440,6 @@ const struct k_clock clock_process = {
 	.clock_get	= process_cpu_clock_get,
 	.timer_create	= process_cpu_timer_create,
 	.nsleep		= process_cpu_nsleep,
-	.nsleep_restart	= process_cpu_nsleep_restart,
 };
 
 const struct k_clock clock_thread = {
