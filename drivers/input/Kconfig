@@ -200,6 +200,14 @@ config INPUT_KEYCOMBO
 	---help---
 	  Say Y here if you want to take action when some keys are pressed;
 
+config POCKET_JUDGE
+	bool "Pocket Judge"
+	depends on INPUT
+	default n
+	help
+	  Enables and disables interrupts based on pocket state to optimize
+	  battery consumption in-pocket.
+
 comment "Input Device Drivers"
 
 source "drivers/input/keyboard/Kconfig"
