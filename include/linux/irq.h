@@ -205,6 +205,7 @@ struct irq_data {
  * IRQD_WAKEUP_ARMED		- Wakeup mode armed
  * IRQD_FORWARDED_TO_VCPU	- The interrupt is forwarded to a VCPU
  * IRQD_AFFINITY_MANAGED	- Affinity is auto-managed by the kernel
+ * IRQD_SINGLE_TARGET		- IRQ allows only a single affinity target
  */
 enum {
 	IRQD_TRIGGER_MASK		= 0xf,
@@ -222,6 +223,7 @@ enum {
 	IRQD_WAKEUP_ARMED		= (1 << 19),
 	IRQD_FORWARDED_TO_VCPU		= (1 << 20),
 	IRQD_AFFINITY_MANAGED		= (1 << 21),
+	IRQD_SINGLE_TARGET		= (1 << 24),
 };
 
 #define __irqd_to_state(d) ACCESS_PRIVATE((d)->common, state_use_accessors)
@@ -268,6 +270,20 @@ static inline void irqd_set_trigger_type(struct irq_data *d, u32 type)
 static inline bool irqd_is_level_type(struct irq_data *d)
 {
 	return __irqd_to_state(d) & IRQD_LEVEL;
+}
+
+/*
+ * Must only be called of irqchip.irq_set_affinity() or low level
+ * hieararchy domain allocation functions.
+ */
+static inline void irqd_set_single_target(struct irq_data *d)
+{
+	__irqd_to_state(d) |= IRQD_SINGLE_TARGET;
+}
+
+static inline bool irqd_is_single_target(struct irq_data *d)
+{
+	return __irqd_to_state(d) & IRQD_SINGLE_TARGET;
 }
 
 static inline bool irqd_is_wakeup_set(struct irq_data *d)
