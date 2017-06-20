@@ -1062,7 +1062,7 @@ EXPORT_SYMBOL(snd_card_is_online_state);
  */
 int snd_power_wait(struct snd_card *card, unsigned int power_state)
 {
-	wait_queue_t wait;
+	wait_queue_entry_t wait;
 	int result = 0;
 
 	/* fastpath */

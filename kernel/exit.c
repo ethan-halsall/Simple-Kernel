@@ -1025,7 +1025,7 @@ struct wait_opts {
 	int			wo_stat;
 	struct rusage		*wo_rusage;
 
-	wait_queue_t		child_wait;
+	wait_queue_entry_t		child_wait;
 	int			notask_error;
 };
 
@@ -1513,7 +1513,7 @@ static int ptrace_do_wait(struct wait_opts *wo, struct task_struct *tsk)
 	return 0;
 }
 
-static int child_wait_callback(wait_queue_t *wait, unsigned mode,
+static int child_wait_callback(wait_queue_entry_t *wait, unsigned mode,
 				int sync, void *key)
 {
 	struct wait_opts *wo = container_of(wait, struct wait_opts,

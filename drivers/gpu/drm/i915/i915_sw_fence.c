@@ -51,7 +51,7 @@ static void __i915_sw_fence_wake_up_all(struct i915_sw_fence *fence,
 					struct list_head *continuation)
 {
 	wait_queue_head_t *x = &fence->wait;
-	wait_queue_t *pos, *next;
+	wait_queue_entry_t *pos, *next;
 	unsigned long flags;
 
 	atomic_set_release(&fence->pending, -1); /* 0 -> -1 [done] */
@@ -130,7 +130,7 @@ void i915_sw_fence_commit(struct i915_sw_fence *fence)
 	i915_sw_fence_put(fence);
 }
 
-static int i915_sw_fence_wake(wait_queue_t *wq, unsigned mode, int flags, void *key)
+static int i915_sw_fence_wake(wait_queue_entry_t *wq, unsigned mode, int flags, void *key)
 {
 	list_del(&wq->task_list);
 	__i915_sw_fence_complete(wq->private, key);
@@ -141,7 +141,7 @@ static int i915_sw_fence_wake(wait_queue_t *wq, unsigned mode, int flags, void *
 static bool __i915_sw_fence_check_if_after(struct i915_sw_fence *fence,
 				    const struct i915_sw_fence * const signaler)
 {
-	wait_queue_t *wq;
+	wait_queue_entry_t *wq;
 
 	if (__test_and_set_bit(I915_SW_FENCE_CHECKED_BIT, &fence->flags))
 		return false;
@@ -162,7 +162,7 @@ static bool __i915_sw_fence_check_if_after(struct i915_sw_fence *fence,
 
 static void __i915_sw_fence_clear_checked_bit(struct i915_sw_fence *fence)
 {
-	wait_queue_t *wq;
+	wait_queue_entry_t *wq;
 
 	if (!__test_and_clear_bit(I915_SW_FENCE_CHECKED_BIT, &fence->flags))
 		return;
@@ -194,7 +194,7 @@ static bool i915_sw_fence_check_if_after(struct i915_sw_fence *fence,
 
 int i915_sw_fence_await_sw_fence(struct i915_sw_fence *fence,
 				 struct i915_sw_fence *signaler,
-				 wait_queue_t *wq)
+				 wait_queue_entry_t *wq)
 {
 	unsigned long flags;
 	int pending;
@@ -215,7 +215,7 @@ int i915_sw_fence_await_sw_fence(struct i915_sw_fence *fence,
 
 	spin_lock_irqsave(&signaler->wait.lock, flags);
 	if (likely(!i915_sw_fence_done(signaler))) {
-		__add_wait_queue_tail(&signaler->wait, wq);
+		__add_wait_queue_entry_tail(&signaler->wait, wq);
 		pending = 1;
 	} else {
 		i915_sw_fence_wake(wq, 0, 0, NULL);

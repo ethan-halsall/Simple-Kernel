@@ -820,7 +820,7 @@ static ssize_t ipmi_read(struct file *file,
 			 loff_t      *ppos)
 {
 	int          rv = 0;
-	wait_queue_t wait;
+	wait_queue_entry_t wait;
 
 	if (count <= 0)
 		return 0;
