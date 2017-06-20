@@ -1131,7 +1131,7 @@ out_unlock:
 		 * ->whead = NULL and do another remove_wait_queue() after
 		 * us, so we can't use __remove_wait_queue().
 		 */
-		list_del_init(&wait->task_list);
+		list_del_init(&wait->entry);
 		/*
 		 * ->whead != NULL protects us from the race with ep_free()
 		 * or ep_remove(), ep_remove_wait_queue() takes whead->lock
