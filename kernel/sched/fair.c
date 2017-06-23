@@ -6393,6 +6393,13 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 	this_load = target_load(this_cpu, idx);
 
 	/*
+	 * Common case: CPUs are in the same socket, and select_idle_sibling()
+	 * will do its thing regardless of what we return:
+	 */
+	if (cpus_share_cache(prev_cpu, this_cpu))
+		return true;
+
+	/*
 	 * If sync wakeup then subtract the (maximum possible)
 	 * effect of the currently running task from the load
 	 * of the current CPU:
