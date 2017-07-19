@@ -369,12 +369,10 @@ struct cpufreq_driver {
 #define CPUFREQ_NEED_INITIAL_FREQ_CHECK	(1 << 5)
 
 /*
- * Indicates that it is safe to call cpufreq_driver_target from
- * non-interruptable context in scheduler hot paths.  Drivers must
- * opt-in to this flag, as the safe default is that they might sleep
- * or be too slow for hot path use.
+ * Set by drivers to disallow use of governors with "dynamic_switching" flag
+ * set.
  */
-#define CPUFREQ_DRIVER_FAST		(1 << 6)
+#define CPUFREQ_NO_AUTO_DYNAMIC_SWITCHING (1 << 6)
 
 int cpufreq_register_driver(struct cpufreq_driver *driver_data);
 int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
