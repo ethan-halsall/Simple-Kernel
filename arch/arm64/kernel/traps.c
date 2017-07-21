@@ -585,7 +585,7 @@ static void cntfrq_read_handler(unsigned int esr, struct pt_regs *regs)
 	int rt = (esr & ESR_ELx_SYS64_ISS_RT_MASK) >> ESR_ELx_SYS64_ISS_RT_SHIFT;
 
 	if (rt != 31)
-		regs->regs[rt] = read_sysreg(cntfrq_el0);
+		regs->regs[rt] = arch_timer_get_rate();
 	regs->pc += 4;
 }
 
