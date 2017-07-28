@@ -120,6 +120,15 @@ struct cpufreq_policy {
 	bool			fast_switch_possible;
 	bool			fast_switch_enabled;
 
+	/*
+	 * Remote DVFS flag (Not added to the driver structure as we don't want
+	 * to access another structure from scheduler hotpath).
+	 *
+	 * Should be set if CPUs can do DVFS on behalf of other CPUs from
+	 * different cpufreq policies.
+	 */
+	bool			dvfs_possible_from_any_cpu;
+
 	 /* Cached frequency lookup from cpufreq_driver_resolve_freq. */
 	unsigned int cached_target_freq;
 	int cached_resolved_idx;
@@ -602,8 +611,13 @@ extern struct cpufreq_governor cpufreq_gov_sched;
 
 static inline bool cpufreq_can_do_remote_dvfs(struct cpufreq_policy *policy)
 {
-	/* Allow remote callbacks only on the CPUs sharing cpufreq policy */
-	if (cpumask_test_cpu(smp_processor_id(), policy->cpus))
+	/*
+	 * Allow remote callbacks if:
+	 * - dvfs_possible_from_any_cpu flag is set
+	 * - the local and remote CPUs share cpufreq policy
+	 */
+	if (policy->dvfs_possible_from_any_cpu ||
+	    cpumask_test_cpu(smp_processor_id(), policy->cpus))
 		return true;
 
 	return false;
