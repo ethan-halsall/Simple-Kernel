@@ -822,6 +822,9 @@ static void rcu_eqs_enter(bool user)
  * We crowbar the ->dynticks_nesting field to zero to allow for
  * the possibility of usermode upcalls having messed up our count
  * of interrupt nesting level during the prior busy period.
+ *
+ * If you add or remove a call to rcu_idle_enter(), be sure to test with
+ * CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_idle_enter(void)
 {
@@ -837,6 +840,9 @@ void rcu_idle_enter(void)
  * is permitted between this call and rcu_user_exit(). This way the
  * CPU doesn't need to maintain the tick for RCU maintenance purposes
  * when the CPU runs in userspace.
+ *
+ * If you add or remove a call to rcu_user_enter(), be sure to test with
+ * CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_user_enter(void)
 {
@@ -860,6 +866,9 @@ void rcu_user_enter(void)
  * Use things like work queues to work around this limitation.
  *
  * You have been warned.
+ *
+ * If you add or remove a call to rcu_irq_exit(), be sure to test with
+ * CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_irq_exit(void)
 {
@@ -885,6 +894,9 @@ void rcu_irq_exit(void)
 
 /*
  * Wrapper for rcu_irq_exit() where interrupts are enabled.
+ *
+ * If you add or remove a call to rcu_irq_exit_irqson(), be sure to test
+ * with CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_irq_exit_irqson(void)
 {
@@ -955,6 +967,9 @@ static void rcu_eqs_exit(bool user)
  * allow for the possibility of usermode upcalls messing up our count
  * of interrupt nesting level during the busy period that is just
  * now starting.
+ *
+ * If you add or remove a call to rcu_idle_exit(), be sure to test with
+ * CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_idle_exit(void)
 {
@@ -971,6 +986,9 @@ void rcu_idle_exit(void)
  *
  * Exit RCU idle mode while entering the kernel because it can
  * run a RCU read side critical section anytime.
+ *
+ * If you add or remove a call to rcu_user_exit(), be sure to test with
+ * CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_user_exit(void)
 {
@@ -996,6 +1014,9 @@ void rcu_user_exit(void)
  * Use things like work queues to work around this limitation.
  *
  * You have been warned.
+ *
+ * If you add or remove a call to rcu_irq_enter(), be sure to test with
+ * CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_irq_enter(void)
 {
@@ -1021,6 +1042,9 @@ void rcu_irq_enter(void)
 
 /*
  * Wrapper for rcu_irq_enter() where interrupts are enabled.
+ *
+ * If you add or remove a call to rcu_irq_enter_irqson(), be sure to test
+ * with CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_irq_enter_irqson(void)
 {
@@ -1039,6 +1063,9 @@ void rcu_irq_enter_irqson(void)
  * that the CPU is active.  This implementation permits nested NMIs, as
  * long as the nesting level does not overflow an int.  (You will probably
  * run out of stack space first.)
+ *
+ * If you add or remove a call to rcu_nmi_enter(), be sure to test
+ * with CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_nmi_enter(void)
 {
@@ -1071,6 +1098,9 @@ void rcu_nmi_enter(void)
  * RCU-idle period, update rdtp->dynticks and rdtp->dynticks_nmi_nesting
  * to let the RCU grace-period handling know that the CPU is back to
  * being RCU-idle.
+ *
+ * If you add or remove a call to rcu_nmi_exit(), be sure to test
+ * with CONFIG_RCU_EQS_DEBUG=y.
  */
 void rcu_nmi_exit(void)
 {
