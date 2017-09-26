@@ -217,4 +217,7 @@ source "drivers/gps/Kconfig"
 source "drivers/halls/Kconfig"
 
 source "drivers/energy_model/Kconfig"
+
+source "drivers/opp/Kconfig"
+
 endmenu
