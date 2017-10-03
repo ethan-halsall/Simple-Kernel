@@ -137,6 +137,8 @@ extern void syscall_unregfunc(void);
 		if (!(cond))						\
 			return;						\
 		prercu;							\
+		if (rcucheck)						\
+			rcu_irq_enter_irqson();				\
 		rcu_read_lock_sched_notrace();				\
 		it_func_ptr = rcu_dereference_sched((tp)->funcs);	\
 		if (it_func_ptr) {					\
