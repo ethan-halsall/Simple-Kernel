@@ -44,7 +44,4 @@ static __always_inline bool static_key_false(struct static_key *key);
 
 #include <asm/qrwlock.h>
 
-#define arch_read_lock_flags(lock, flags) arch_read_lock(lock)
-#define arch_write_lock_flags(lock, flags) arch_write_lock(lock)
-
 #endif /* _ASM_X86_SPINLOCK_H */
