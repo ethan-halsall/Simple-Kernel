@@ -263,7 +263,7 @@ void rcu_bh_qs(void)
 #endif
 
 static DEFINE_PER_CPU(struct rcu_dynticks, rcu_dynticks) = {
-	.dynticks_nesting = DYNTICK_TASK_EXIT_IDLE,
+	.dynticks_nesting = 1,
 	.dynticks_nmi_nesting = DYNTICK_IRQ_NONIDLE,
 	.dynticks = ATOMIC_INIT(RCU_DYNTICK_CTRL_CTR),
 };
@@ -810,6 +810,10 @@ static void rcu_eqs_enter_common(bool user)
 /*
  * Enter an RCU extended quiescent state, which can be either the
  * idle loop or adaptive-tickless usermode execution.
+ *
+ * We crowbar the ->dynticks_nmi_nesting field to zero to allow for
+ * the possibility of usermode upcalls having messed up our count
+ * of interrupt nesting level during the prior busy period.
  */
 static void rcu_eqs_enter(bool user)
 {
@@ -818,11 +822,11 @@ static void rcu_eqs_enter(bool user)
 	rdtp = this_cpu_ptr(&rcu_dynticks);
 	WRITE_ONCE(rdtp->dynticks_nmi_nesting, 0);
 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) &&
-		     (rdtp->dynticks_nesting & DYNTICK_TASK_NEST_MASK) == 0);
-	if ((rdtp->dynticks_nesting & DYNTICK_TASK_NEST_MASK) == DYNTICK_TASK_NEST_VALUE)
+		     rdtp->dynticks_nesting == 0);
+	if (rdtp->dynticks_nesting == 1)
 		rcu_eqs_enter_common(user);
 	else
-		rdtp->dynticks_nesting -= DYNTICK_TASK_NEST_VALUE;
+		rdtp->dynticks_nesting--;
 }
 
 /**
@@ -832,10 +836,6 @@ static void rcu_eqs_enter(bool user)
  * read-side critical sections can occur.  (Though RCU read-side
  * critical sections can occur in irq handlers in idle, a possibility
  * handled by irq_enter() and irq_exit().)
- *
- * We crowbar the ->dynticks_nesting field to zero to allow for
- * the possibility of usermode upcalls having messed up our count
- * of interrupt nesting level during the prior busy period.
  *
  * If you add or remove a call to rcu_idle_enter(), be sure to test with
  * CONFIG_RCU_EQS_DEBUG=y.
@@ -981,6 +981,10 @@ static void rcu_eqs_exit_common(long long newval, int user)
 /*
  * Exit an RCU extended quiescent state, which can be either the
  * idle loop or adaptive-tickless usermode execution.
+ *
+ * We crowbar the ->dynticks_nmi_nesting field to DYNTICK_IRQ_NONIDLE to
+ * allow for the possibility of usermode upcalls messing up our count of
+ * interrupt nesting level during the busy period that is just now starting.
  */
 static void rcu_eqs_exit(bool user)
 {
@@ -991,12 +995,12 @@ static void rcu_eqs_exit(bool user)
 	rdtp = this_cpu_ptr(&rcu_dynticks);
 	oldval = rdtp->dynticks_nesting;
 	WARN_ON_ONCE(IS_ENABLED(CONFIG_RCU_EQS_DEBUG) && oldval < 0);
-	if (oldval & DYNTICK_TASK_NEST_MASK) {
-		rdtp->dynticks_nesting += DYNTICK_TASK_NEST_VALUE;
+	if (oldval) {
+		rdtp->dynticks_nesting++;
 	} else {
 		__this_cpu_inc(disable_rcu_irq_enter);
-		rcu_eqs_exit_common(DYNTICK_TASK_EXIT_IDLE, user);
-		rdtp->dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
+		rcu_eqs_exit_common(1, user);
+		rdtp->dynticks_nesting = 1;
 		__this_cpu_dec(disable_rcu_irq_enter);
 		WRITE_ONCE(rdtp->dynticks_nmi_nesting, DYNTICK_IRQ_NONIDLE);
 	}
@@ -1007,11 +1011,6 @@ static void rcu_eqs_exit(bool user)
  *
  * Exit idle mode, in other words, -enter- the mode in which RCU
  * read-side critical sections can occur.
- *
- * We crowbar the ->dynticks_nesting field to DYNTICK_TASK_NEST to
- * allow for the possibility of usermode upcalls messing up our count
- * of interrupt nesting level during the busy period that is just
- * now starting.
  *
  * If you add or remove a call to rcu_idle_exit(), be sure to test with
  * CONFIG_RCU_EQS_DEBUG=y.
@@ -1216,7 +1215,8 @@ EXPORT_SYMBOL_GPL(rcu_lockdep_current_cpu_online);
  */
 static int rcu_is_cpu_rrupt_from_idle(void)
 {
-	return __this_cpu_read(rcu_dynticks.dynticks_nesting) <= 1;
+	return __this_cpu_read(rcu_dynticks.dynticks_nesting) <= 0 &&
+	       __this_cpu_read(rcu_dynticks.dynticks_nmi_nesting) <= 1;
 }
 
 /*
@@ -3723,7 +3723,7 @@ rcu_boot_init_percpu_data(int cpu, struct rcu_state *rsp)
 	raw_spin_lock_irqsave_rcu_node(rnp, flags);
 	rdp->grpmask = leaf_node_cpu_bit(rdp->mynode, cpu);
 	rdp->dynticks = &per_cpu(rcu_dynticks, cpu);
-	WARN_ON_ONCE(rdp->dynticks->dynticks_nesting != DYNTICK_TASK_EXIT_IDLE);
+	WARN_ON_ONCE(rdp->dynticks->dynticks_nesting != 1);
 	WARN_ON_ONCE(rcu_dynticks_in_eqs(rcu_dynticks_snap(rdp->dynticks)));
 	rdp->cpu = cpu;
 	rdp->rsp = rsp;
@@ -3752,7 +3752,7 @@ rcu_init_percpu_data(int cpu, struct rcu_state *rsp)
 	if (rcu_segcblist_empty(&rdp->cblist) && /* No early-boot CBs? */
 	    !init_nocb_callback_list(rdp))
 		rcu_segcblist_init(&rdp->cblist);  /* Re-enable callbacks. */
-	rdp->dynticks->dynticks_nesting = DYNTICK_TASK_EXIT_IDLE;
+	rdp->dynticks->dynticks_nesting = 1;
 	rcu_dynticks_eqs_online();
 	raw_spin_unlock_rcu_node(rnp);		/* irqs remain disabled. */
 
