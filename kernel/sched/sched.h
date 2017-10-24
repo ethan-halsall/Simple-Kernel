@@ -2293,6 +2293,7 @@ extern void cfs_bandwidth_usage_dec(void);
 enum rq_nohz_flag_bits {
 	NOHZ_TICK_STOPPED,
 	NOHZ_BALANCE_KICK,
+	NOHZ_STATS_KICK
 };
 
 #define NOHZ_KICK_ANY 0
