@@ -27,4 +27,4 @@ obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
 obj-$(CONFIG_CPU_FREQ) += cpufreq.o
 obj-$(CONFIG_CPU_FREQ_GOV_SCHEDUTIL) += cpufreq_schedutil.o
 obj-$(CONFIG_PSI) += psi.o
-obj-$(CONFIG_NO_HZ_FULL) += isolation.o
+obj-$(CONFIG_CPU_ISOLATION) += isolation.o
