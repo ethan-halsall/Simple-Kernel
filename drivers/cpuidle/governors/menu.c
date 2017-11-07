@@ -279,6 +279,10 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 		data->needs_update = 0;
 	}
 
+	if (resume_latency < latency_req &&
+	    resume_latency != PM_QOS_RESUME_LATENCY_NO_CONSTRAINT)
+		latency_req = resume_latency;
+
 	/* Special case when user has set very strict latency requirement */
 	if (unlikely(latency_req == 0))
 		return 0;
