@@ -202,6 +202,7 @@ extern int mod_timer_pending(struct timer_list *timer, unsigned long expires);
 #ifdef CONFIG_SMP
 extern bool check_pending_deferrable_timers(int cpu);
 #endif
+extern int timer_reduce(struct timer_list *timer, unsigned long expires);
 
 /*
  * The jiffies value which is added to now, when there is no timer
