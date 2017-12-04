@@ -3087,3 +3087,12 @@ static inline unsigned long cpu_util_rt(struct rq *rq)
 	return rq->avg_rt.util_avg;
 }
 #endif
+static inline unsigned long cpu_util_dl(struct rq *rq)
+{
+	return (rq->dl.running_bw * SCHED_CAPACITY_SCALE) >> BW_SHIFT;
+}
+
+static inline unsigned long cpu_util_cfs(struct rq *rq)
+{
+	return rq->cfs.avg.util_avg;
+}
