@@ -35,8 +35,6 @@ static inline unsigned long rlimit_max(unsigned int limit)
 #define SCHED_CPUFREQ_FORCE_UPDATE (1U << 7)
 #define SCHED_CPUFREQ_CONTINUE (1U << 8)
 
-#define SCHED_CPUFREQ_RT_DL	(SCHED_CPUFREQ_RT | SCHED_CPUFREQ_DL)
-
 #ifdef CONFIG_CPU_FREQ
 struct update_util_data {
        void (*func)(struct update_util_data *data, u64 time, unsigned int flags);
