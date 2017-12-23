@@ -374,7 +374,7 @@ STORE_FUNCTION(maple_sleep_latency_multiple_store, &mdata->sleep_latency_multipl
 #undef STORE_FUNCTION
 
 #define DD_ATTR(name) \
-	__ATTR(name, S_IRUGO|S_IWUSR, maple_##name##_show, \
+	__ATTR(name, 0644, maple_##name##_show, \
 				      maple_##name##_store)
 
 static struct elv_fs_entry maple_attrs[] = {
