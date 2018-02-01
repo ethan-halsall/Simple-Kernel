@@ -6475,6 +6475,7 @@ DEFINE_PER_CPU(struct sched_domain *, sd_numa);
 DEFINE_PER_CPU(struct sched_domain *, sd_asym);
 DEFINE_PER_CPU(struct sched_domain *, sd_ea);
 DEFINE_PER_CPU(struct sched_domain *, sd_scs);
+DEFINE_STATIC_KEY_FALSE(sched_asym_cpucapacity);
 
 static void update_top_cache_domain(int cpu)
 {
@@ -7649,6 +7650,21 @@ next_level:
 	return asym_tl;
 }
 
+static void update_asym_cpucapacity(int cpu)
+{
+	int enable = false;
+
+	rcu_read_lock();
+	if (lowest_flag_domain(cpu, SD_ASYM_CPUCAPACITY))
+		enable = true;
+	rcu_read_unlock();
+
+	if (enable) {
+		/* This expects to be hotplug-safe */
+		static_branch_enable_cpuslocked(&sched_asym_cpucapacity);
+	}
+}
+
 /*
  * Build sched domains for a given set of cpus and attach the sched domains
  * to the individual cpus
@@ -7735,6 +7751,9 @@ static int build_sched_domains(const struct cpumask *cpu_map,
 		cpu_attach_domain(sd, d.rd, i);
 	}
 	rcu_read_unlock();
+
+	if (!cpumask_empty(cpu_map))
+		update_asym_cpucapacity(cpumask_first(cpu_map));
 
 	ret = 0;
 error:
