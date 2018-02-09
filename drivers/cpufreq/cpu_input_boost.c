@@ -20,6 +20,11 @@ static __read_mostly unsigned int remove_input_boost_freq_perf = CONFIG_REMOVE_I
 static __read_mostly unsigned int general_boost_freq_lp = CONFIG_GENERAL_BOOST_FREQ_LP;
 static __read_mostly unsigned int general_boost_freq_hp = CONFIG_GENERAL_BOOST_FREQ_PERF;
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+static unsigned short dynamic_stune_boost;
+module_param(dynamic_stune_boost, short, 0644);
+#endif
+
 module_param(input_boost_freq_lp, uint, 0644);
 module_param(input_boost_freq_hp, uint, 0644);
 module_param(general_boost_freq_lp, uint, 0644);
@@ -190,6 +195,9 @@ static void input_boost_worker(struct work_struct *work)
 		update_online_cpu_policy();
 	}
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	do_stune_boost("top-app", dynamic_stune_boost);
+#endif
 	queue_delayed_work(b->wq, &b->input_unboost,
 		msecs_to_jiffies(input_boost_duration));
 }
@@ -200,6 +208,9 @@ static void input_unboost_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), typeof(*b), input_unboost);
 
 	clear_boost_bit(b, INPUT_BOOST);
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	reset_stune_boost("top-app");
+#endif
 	update_online_cpu_policy();
 }
 
@@ -212,6 +223,9 @@ static void max_boost_worker(struct work_struct *work)
 		update_online_cpu_policy();
 	}
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	do_stune_boost("top-app", dynamic_stune_boost);
+#endif
 	queue_delayed_work(b->wq, &b->max_unboost,
 		msecs_to_jiffies(atomic_read(&b->max_boost_dur)));
 }
@@ -222,6 +236,9 @@ static void max_unboost_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), typeof(*b), max_unboost);
 
 	clear_boost_bit(b, WAKE_BOOST | MAX_BOOST);
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	reset_stune_boost("top-app");
+#endif
 	update_online_cpu_policy();
 }
 
@@ -352,6 +369,9 @@ free_handle:
 
 static void cpu_input_boost_input_disconnect(struct input_handle *handle)
 {
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	reset_stune_boost("top-app");
+#endif
 	input_close_device(handle);
 	input_unregister_handle(handle);
 	kfree(handle);
