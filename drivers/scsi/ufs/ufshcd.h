@@ -4,6 +4,8 @@
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2018, Google, Inc.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -72,6 +74,7 @@
 #include <linux/fault-inject.h>
 #include "ufs.h"
 #include "ufshci.h"
+#include "ufshpb.h"
 
 #define UFSHCD "ufshcd"
 #define UFSHCD_DRIVER_VERSION "0.3"
@@ -995,6 +998,16 @@ struct ufs_hba {
 	struct io_latency_state io_lat_write;
 	struct ufs_desc_size desc_size;
 	bool restore_needed;
+
+	/* HPB support */
+	u32 ufshpb_feat;
+	int ufshpb_state;
+	int ufshpb_max_regions;
+	struct delayed_work ufshpb_init_work;
+	bool issue_ioctl;
+	struct ufshpb_lu *ufshpb_lup[UFS_UPIU_MAX_GENERAL_LUN];
+	struct scsi_device *sdev_ufs_lu[UFS_UPIU_MAX_GENERAL_LUN];
+	struct work_struct ufshpb_eh_work;
 };
 
 static inline void ufshcd_mark_shutdown_ongoing(struct ufs_hba *hba)
