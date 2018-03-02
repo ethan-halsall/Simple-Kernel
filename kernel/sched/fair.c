@@ -6298,7 +6298,7 @@ static void find_best_target(struct sched_domain *sd, cpumask_t *cpus,
 			long spare_cap;
 			int idle_idx = INT_MAX;
 
-			if (!cpu_online(i))
+			if (!cpu_online(i) || cpu_isolated(i))
 				continue;
 
 			/*
