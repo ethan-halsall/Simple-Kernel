@@ -1118,7 +1118,7 @@ void kgsl_pwrscale_close(struct kgsl_device *device)
 	device->pwrscale.bus_devfreq = NULL;
 	device->pwrscale.devfreqptr = NULL;
 	srcu_cleanup_notifier_head(&device->pwrscale.nh);
-	dev_pm_opp_register_notifier(&device->pdev->dev, &pwr->nb);
+	dev_pm_opp_unregister_notifier(&device->pdev->dev, &pwr->nb);
 	for (i = 0; i < KGSL_PWREVENT_MAX; i++)
 		kfree(pwrscale->history[i].events);
 }
