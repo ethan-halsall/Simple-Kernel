@@ -10746,7 +10746,7 @@ enum restart_beaconing_on_ch_avoid_rule {
 
 /* Hold wakelock for unicast RX packets for the specified duration  */
 #define CFG_RX_WAKELOCK_TIMEOUT_NAME     "rx_wakelock_timeout"
-#define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT  (50)
+#define CFG_RX_WAKELOCK_TIMEOUT_DEFAULT  (7)
 #define CFG_RX_WAKELOCK_TIMEOUT_MIN      (0)
 #define CFG_RX_WAKELOCK_TIMEOUT_MAX      (100)
 
