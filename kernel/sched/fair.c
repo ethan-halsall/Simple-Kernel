@@ -9882,6 +9882,11 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
 		}
 
 		env->imbalance = 0;
+		if (busiest->group_type == group_overloaded &&
+				local->group_type <= group_misfit_task) {
+			env->imbalance = busiest->load_per_task;
+			return;
+		}
 		return fix_small_imbalance(env, sds);
 	}
 
