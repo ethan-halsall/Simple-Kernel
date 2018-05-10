@@ -2001,6 +2001,7 @@ unsigned long arch_scale_freq_capacity(struct sched_domain *sd, int cpu)
 #endif
 
 #ifndef arch_scale_max_freq_capacity
+struct sched_domain;
 static __always_inline
 unsigned long arch_scale_max_freq_capacity(struct sched_domain *sd, int cpu)
 {
