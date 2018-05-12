@@ -89,9 +89,10 @@ TRACE_EVENT(rcu_grace_period,
  * other than rcuname, which comes from the rcu_state structure, and event,
  * which is one of the following:
  *
- * "Startleaf": Request a nocb grace period based on leaf-node data.
- * "Startedleaf": Leaf-node start proved sufficient.
- * "Startedleafroot": Leaf-node start proved sufficient after checking root.
+ * "Startleaf": Request a grace period based on leaf-node data.
+ * "Prestarted": Someone beat us to the request
+ * "Startedleaf": Leaf node marked for future GP.
+ * "Startedleafroot": All nodes from leaf to root marked for future GP.
  * "Startedroot": Requested a nocb grace period based on root-node data.
  * "StartWait": Start waiting for the requested grace period.
  * "ResumeWait": Resume waiting after signal.
