@@ -26,9 +26,9 @@ struct cam_context;
 #define CAM_CTX_DEV_NAME_MAX_LENGTH 20
 
 /* max request number */
-#define CAM_CTX_REQ_MAX              20
-#define CAM_CTX_CFG_MAX              20
-#define CAM_CTX_RES_MAX              20
+#define CAM_CTX_REQ_MAX              48
+#define CAM_CTX_CFG_MAX              48
+#define CAM_CTX_RES_MAX              48
 
 /**
  * enum cam_ctx_state -  context top level states
