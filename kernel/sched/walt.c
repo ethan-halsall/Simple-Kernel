@@ -426,18 +426,12 @@ void sched_account_irqstart(int cpu, struct task_struct *curr, u64 wallclock)
 
 /*
  * Return total number of tasks "eligible" to run on highest capacity cpu
- *
- * This is simply nr_big_tasks for cpus which are not of max_capacity and
- * nr_running for cpus of max_capacity
  */
-unsigned int nr_eligible_big_tasks(int cpu)
+unsigned int walt_big_tasks(int cpu)
 {
 	struct rq *rq = cpu_rq(cpu);
 
-	if (!is_max_capacity_cpu(cpu))
-		return rq->walt_stats.nr_big_tasks;
-
-	return rq->nr_running;
+	return rq->walt_stats.nr_big_tasks;
 }
 
 void clear_walt_request(int cpu)
