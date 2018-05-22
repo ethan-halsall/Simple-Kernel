@@ -150,7 +150,7 @@ static long n_rcu_torture_boost_ktrerror;
 static long n_rcu_torture_boost_rterror;
 static long n_rcu_torture_boost_failure;
 static long n_rcu_torture_boosts;
-static long n_rcu_torture_timers;
+static atomic_long_t n_rcu_torture_timers;
 static long n_barrier_attempts;
 static long n_barrier_successes;
 static atomic_long_t n_cbfloods;
@@ -1158,6 +1158,7 @@ static void rcu_torture_timer(unsigned long unused)
 	int pipe_count;
 	unsigned long long ts;
 
+	atomic_long_inc(&n_rcu_torture_timers);
 	idx = cur_ops->readlock();
 	started = cur_ops->get_gp_seq();
 	ts = rcu_trace_clock_local();
@@ -1175,7 +1176,6 @@ static void rcu_torture_timer(unsigned long unused)
 		atomic_inc(&n_rcu_torture_mberror);
 	spin_lock(&rand_lock);
 	cur_ops->read_delay(&rand);
-	n_rcu_torture_timers++;
 	spin_unlock(&rand_lock);
 	preempt_disable();
 	pipe_count = p->rtort_pipe_count;
@@ -1288,7 +1288,7 @@ rcu_torture_stats_print(void)
 	pr_cont("rtbf: %ld rtb: %ld nt: %ld ",
 		n_rcu_torture_boost_failure,
 		n_rcu_torture_boosts,
-		n_rcu_torture_timers);
+		atomic_long_read(&n_rcu_torture_timers));
 	torture_onoff_stats();
 	pr_cont("barrier: %ld/%ld:%ld ",
 		n_barrier_successes,
