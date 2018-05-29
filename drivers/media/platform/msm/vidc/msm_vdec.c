@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, 2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -552,6 +552,21 @@ struct msm_vidc_format vdec_formats[] = {
 	},
 };
 
+static struct msm_vidc_format_constraint dec_pix_format_constraints[] = {
+	{
+		.fourcc = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS,
+		.num_planes = 2,
+		.y_stride_multiples = 256,
+		.y_max_stride = 8192,
+		.y_min_plane_buffer_height_multiple = 32,
+		.y_buffer_alignment = 256,
+		.uv_stride_multiples = 256,
+		.uv_max_stride = 8192,
+		.uv_min_plane_buffer_height_multiple = 16,
+		.uv_buffer_alignment = 256,
+	},
+};
+
 static bool msm_vidc_check_for_vp9d_overload(struct msm_vidc_core *core)
 {
 	u32 vp9d_instance_count = 0;
@@ -573,6 +588,7 @@ static bool msm_vidc_check_for_vp9d_overload(struct msm_vidc_core *core)
 int msm_vdec_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 {
 	struct msm_vidc_format *fmt = NULL;
+	struct msm_vidc_format_constraint *fmt_constraint = NULL;
 	struct hal_frame_size frame_sz;
 	unsigned int extra_idx = 0;
 	int rc = 0;
@@ -619,6 +635,28 @@ int msm_vdec_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 		msm_comm_set_color_format(inst,
 				msm_comm_get_hal_output_buffer(inst),
 				f->fmt.pix_mp.pixelformat);
+
+		fmt_constraint =
+		msm_comm_get_pixel_fmt_constraints(dec_pix_format_constraints,
+			ARRAY_SIZE(dec_pix_format_constraints),
+			f->fmt.pix_mp.pixelformat);
+
+		if (!fmt_constraint) {
+			dprintk(VIDC_INFO,
+				"Format constraint not required for %d on CAPTURE port\n",
+				f->fmt.pix_mp.pixelformat);
+		} else {
+			rc = msm_comm_set_color_format_constraints(inst,
+				msm_comm_get_hal_output_buffer(inst),
+				fmt_constraint);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"Set constraint for %d failed on CAPTURE port\n",
+					f->fmt.pix_mp.pixelformat);
+				rc = -EINVAL;
+				goto err_invalid_fmt;
+			}
+		}
 
 		inst->clk_data.opb_fourcc = f->fmt.pix_mp.pixelformat;
 		if (msm_comm_get_stream_output_mode(inst) ==
