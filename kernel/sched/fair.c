@@ -10750,17 +10750,11 @@ static int need_active_balance(struct lb_env *env)
 		return 1;
 	}
 
-	return unlikely(sd->nr_balance_failed >
-			sd->cache_nice_tries + NEED_ACTIVE_BALANCE_THRESHOLD);
-}
+	if (env->src_grp_type == group_overloaded && env->src_rq->misfit_task_load)
+		return 1;
 
-static int group_balance_cpu_not_isolated(struct sched_group *sg)
-{
-	cpumask_t cpus;
 
-	cpumask_and(&cpus, sched_group_cpus(sg), sched_group_mask(sg));
-	cpumask_andnot(&cpus, &cpus, cpu_isolated_mask);
-	return cpumask_first(&cpus);
+	return unlikely(sd->nr_balance_failed > sd->cache_nice_tries+2);
 }
 
 static int active_load_balance_cpu_stop(void *data);
