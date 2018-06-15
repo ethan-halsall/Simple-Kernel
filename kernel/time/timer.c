@@ -1296,8 +1296,7 @@ int del_timer_sync(struct timer_list *timer)
 		int ret = try_to_del_timer_sync(timer);
 		if (ret >= 0)
 			return ret;
-		cpu_relax();
-		ndelay(TIMER_LOCK_TIGHT_LOOP_DELAY_NS);
+		udelay(1);
 	}
 }
 EXPORT_SYMBOL(del_timer_sync);
