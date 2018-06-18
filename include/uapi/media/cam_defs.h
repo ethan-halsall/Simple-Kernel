@@ -25,6 +25,11 @@
 #define CAM_EXT_OPCODE_BASE                     0x200
 #define CAM_CONFIG_DEV_EXTERNAL                 (CAM_EXT_OPCODE_BASE + 0x1)
 
+/* camera ir op codes*/
+#define CAM_IR_UPDATE                           (CAM_EXT_OPCODE_BASE + 0x2)
+#define CAM_IR_GET_POWER_STATE                  (CAM_EXT_OPCODE_BASE + 0x3)
+#define CAM_IR_LUMA_READ                        (CAM_EXT_OPCODE_BASE + 0x4)
+
 /* camera handle type */
 #define CAM_HANDLE_USER_POINTER                 1
 #define CAM_HANDLE_MEM_HANDLE                   2
@@ -575,6 +580,11 @@ struct cam_flush_dev_cmd {
 	uint32_t       flush_type;
 	uint32_t       reserved;
 	int64_t        req_id;
+};
+
+struct cam_luma_data {
+	uint32_t        expo;
+	uint32_t        gain;
 };
 
 /**
