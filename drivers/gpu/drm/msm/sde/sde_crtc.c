@@ -21,6 +21,7 @@
 #include <linux/sort.h>
 #include <linux/debugfs.h>
 #include <linux/ktime.h>
+#include <linux/cpu_input_boost.h>
 #include <uapi/drm/sde_drm.h>
 #include <drm/drm_mode.h>
 #include <drm/drm_crtc.h>
@@ -3718,6 +3719,8 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 		return;
 
 	SDE_ATRACE_BEGIN("crtc_commit");
+
+	cpu_input_boost_kick();
 
 	is_error = _sde_crtc_prepare_for_kickoff_rot(dev, crtc);
 
