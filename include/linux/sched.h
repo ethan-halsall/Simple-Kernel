@@ -1638,10 +1638,8 @@ union rcu_special {
 	struct {
 		u8 blocked;
 		u8 need_qs;
-		u8 exp_need_qs;
-		u8 pad;	/* Otherwise the compiler can store garbage here. */
 	} b; /* Bits. */
-	u32 s; /* Set of bits. */
+	u16 s; /* Set of bits. */
 };
 struct rcu_node;
 
