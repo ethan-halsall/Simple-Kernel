@@ -561,10 +561,10 @@ struct rt_rq {
 	} highest_prio;
 #endif
 #ifdef CONFIG_SMP
-	unsigned long rt_nr_migratory;
-	unsigned long rt_nr_total;
-	int overloaded;
-	struct plist_head pushable_tasks;
+	unsigned long		rt_nr_migratory;
+	unsigned long		rt_nr_total;
+	int			overloaded;
+	struct plist_head	pushable_tasks;
 
 #endif /* CONFIG_SMP */
 	int rt_queued;
@@ -812,10 +812,11 @@ struct rq {
 
 	struct list_head cfs_tasks;
 
-	u64 rt_avg;
-	u64 age_stamp;
-	u64 idle_stamp;
-	u64 avg_idle;
+	u64			rt_avg;
+	u64			age_stamp;
+	struct sched_avg	avg_rt;
+	u64			idle_stamp;
+	u64			avg_idle;
 
 	/* This is used to determine avg_idle's max value */
 	u64 max_idle_balance_cost;
@@ -3038,5 +3039,10 @@ static inline void sched_irq_work_queue(struct irq_work *work)
 		irq_work_queue(work);
 	else
 		irq_work_queue_on(work, cpumask_any(cpu_online_mask));
+}
+
+static inline unsigned long cpu_util_rt(struct rq *rq)
+{
+	return rq->avg_rt.util_avg;
 }
 #endif
