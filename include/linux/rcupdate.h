@@ -52,34 +52,14 @@ bool rcu_irq_enter_disabled(void);
 
 /* Exported common interfaces */
 
-#ifdef CONFIG_TINY_RCU
-#define	call_rcu	call_rcu_sched
-#else
-void call_rcu(struct rcu_head *head, rcu_callback_t func);
+#ifndef CONFIG_TINY_RCU
+void synchronize_sched(void);
+void call_rcu_sched(struct rcu_head *head, rcu_callback_t func);
 #endif
 
-void call_rcu_sched(struct rcu_head *head, rcu_callback_t func);
-void synchronize_sched(void);
-
-/**
- * call_rcu_tasks() - Queue an RCU for invocation task-based grace period
- * @head: structure to be used for queueing the RCU updates.
- * @func: actual callback function to be invoked after the grace period
- *
- * The callback function will be invoked some time after a full grace
- * period elapses, in other words after all currently executing RCU
- * read-side critical sections have completed. call_rcu_tasks() assumes
- * that the read-side critical sections end at a voluntary context
- * switch (not a preemption!), entry into idle, or transition to usermode
- * execution.  As such, there are no read-side primitives analogous to
- * rcu_read_lock() and rcu_read_unlock() because this primitive is intended
- * to determine that all tasks have passed through a safe state, not so
- * much for data-strcuture synchronization.
- *
- * See the description of call_rcu() for more detailed information on
- * memory ordering guarantees.
- */
+void call_rcu(struct rcu_head *head, rcu_callback_t func);
 void rcu_barrier_tasks(void);
+void synchronize_rcu(void);
 
 static inline void call_rcu_bh(struct rcu_head *head, rcu_callback_t func)
 {
@@ -90,7 +70,6 @@ static inline void call_rcu_bh(struct rcu_head *head, rcu_callback_t func)
 
 void __rcu_read_lock(void);
 void __rcu_read_unlock(void);
-void synchronize_rcu(void);
 
 /*
  * Defined as a macro as it is a very low level header included from
