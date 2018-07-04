@@ -9771,7 +9771,7 @@ group_type group_classify(struct sched_group *group,
  * @load_idx: Load index of sched_domain of this_cpu for load calc.
  * @local_group: Does group contain this_cpu.
  * @sgs: variable to hold the statistics for this group.
- * @overload: Indicate more than one runnable task for any CPU.
+ * @overload: Indicate pullable load (e.g. >1 runnable task).
  * @overutilized: Indicate overutilization for any CPU.
  */
 static inline void update_sg_lb_stats(struct lb_env *env,
@@ -9823,8 +9823,10 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			*overutilized = true;
 
 		if (env->sd->flags & SD_ASYM_CPUCAPACITY &&
-			sgs->group_misfit_task_load < rq->misfit_task_load)
+			sgs->group_misfit_task_load < rq->misfit_task_load) {
 				sgs->group_misfit_task_load = rq->misfit_task_load;
+				*overload = 1;
+		}
 	}
 
 	/* Isolated CPU has no weight */
