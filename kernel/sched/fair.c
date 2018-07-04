@@ -9562,18 +9562,16 @@ skip_unlock: __attribute__ ((unused));
 		capacity = 1;
 
 	cpu_rq(cpu)->cpu_capacity = capacity;
-	if (!sd->child) {
-		sdg->sgc->capacity = capacity;
-		sdg->sgc->max_capacity = capacity;
-		sdg->sgc->min_capacity = capacity;
-	}
+	sdg->sgc->capacity = capacity;
+	sdg->sgc->min_capacity = capacity;
+	sdg->sgc->max_capacity = capacity;
 }
 
 void update_group_capacity(struct sched_domain *sd, int cpu)
 {
 	struct sched_domain *child = sd->child;
 	struct sched_group *group, *sdg = sd->groups;
-	unsigned long capacity, max_capacity, min_capacity;
+	unsigned long capacity, min_capacity, max_capacity;
 	unsigned long interval;
 
 	interval = msecs_to_jiffies(sd->balance_interval);
@@ -9595,6 +9593,7 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 	capacity = 0;
 	max_capacity = 0;
 	min_capacity = ULONG_MAX;
+	max_capacity = 0;
 
 	if (child->flags & SD_OVERLAP) {
 		/*
@@ -9608,9 +9607,8 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 			if (cpumask_test_cpu(cpu, cpu_isolated_mask))
 				continue;
 
-			capacity += cpu_cap;
-			max_capacity = max(cpu_cap, max_capacity);
-			min_capacity = min(cpu_cap, min_capacity);
+			min_capacity = min(capacity, min_capacity);
+			max_capacity = max(capacity, max_capacity);
 		}
 	} else  {
 		/*
@@ -9623,14 +9621,9 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 			struct sched_group_capacity *sgc = group->sgc;
 			cpumask_t *cpus = sched_group_cpus(group);
 
-			/* Revisit this later. This won't work for MT domain */
-			if (!cpu_isolated(cpumask_first(cpus))) {
-				capacity += sgc->capacity;
-				min_capacity = min(sgc->min_capacity,
-							min_capacity);
-				max_capacity = max(sgc->max_capacity,
-							max_capacity);
-			}
+			capacity += sgc->capacity;
+			min_capacity = min(sgc->min_capacity, min_capacity);
+			max_capacity = max(sgc->max_capacity, max_capacity);
 			group = group->next;
 		} while (group != child->groups);
 	}
@@ -9638,6 +9631,7 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 	sdg->sgc->capacity = capacity;
 	sdg->sgc->max_capacity = max_capacity;
 	sdg->sgc->min_capacity = min_capacity;
+	sdg->sgc->max_capacity = max_capacity;
 }
 
 /*
@@ -9734,13 +9728,24 @@ group_is_overloaded(struct lb_env *env, struct sg_lb_stats *sgs)
 
 
 /*
- * group_smaller_cpu_capacity: Returns true if sched_group sg has smaller
- * per-cpu capacity than sched_group ref.
+ * group_smaller_min_cpu_capacity: Returns true if sched_group sg has smaller
+ * per-CPU capacity than sched_group ref.
  */
 static inline bool
-group_smaller_cpu_capacity(struct sched_group *sg, struct sched_group *ref)
+group_smaller_min_cpu_capacity(struct sched_group *sg, struct sched_group *ref)
 {
 	return sg->sgc->max_capacity < ref->sgc->max_capacity;
+}
+
+/*
+ * group_smaller_max_cpu_capacity: Returns true if sched_group sg has smaller
+ * per-CPU capacity_orig than sched_group ref.
+ */
+static inline bool
+group_smaller_max_cpu_capacity(struct sched_group *sg, struct sched_group *ref)
+{
+	return sg->sgc->max_capacity * capacity_margin <
+						ref->sgc->max_capacity * 1024;
 }
 
 static inline enum
@@ -9897,7 +9902,7 @@ static bool update_sd_pick_busiest(struct lb_env *env,
 	 * per-cpu capacity. No reason to pull tasks to less capable cpus.
 	 */
 	if (sgs->sum_nr_running <= sgs->group_weight &&
-	    group_smaller_cpu_capacity(sds->local, sg))
+	    group_smaller_min_cpu_capacity(sds->local, sg))
 		return false;
 
 asym_packing:
