@@ -117,7 +117,7 @@ static void _sched_set_boost(int old_val, int type)
 {
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	if (type > 0)
-		stune_boost("top-app");
+		do_stune_sched_boost("top-app");
 	else
 		reset_stune_boost("top-app");
 #endif // CONFIG_DYNAMIC_STUNE_BOOST
