@@ -9488,16 +9488,12 @@ static unsigned long scale_rt_capacity(int cpu)
 	struct rq *rq = cpu_rq(cpu);
 	unsigned long max = arch_scale_cpu_capacity(NULL, cpu);
 	unsigned long used, free;
-#if defined(CONFIG_IRQ_TIME_ACCOUNTING) || defined(CONFIG_PARAVIRT_TIME_ACCOUNTING)
 	unsigned long irq;
-#endif
 
-#if defined(CONFIG_IRQ_TIME_ACCOUNTING) || defined(CONFIG_PARAVIRT_TIME_ACCOUNTING)
-	irq = READ_ONCE(rq->avg_irq.util_avg);
+	irq = cpu_util_irq(rq);
 
 	if (unlikely(irq >= max))
 		return 1;
-#endif
 
 	used = READ_ONCE(rq->avg_rt.util_avg);
 	used += READ_ONCE(rq->avg_dl.util_avg);
@@ -9506,11 +9502,8 @@ static unsigned long scale_rt_capacity(int cpu)
 		return 1;
 
 	free = max - used;
-#if defined(CONFIG_IRQ_TIME_ACCOUNTING) || defined(CONFIG_PARAVIRT_TIME_ACCOUNTING)
-	free *= (max - irq);
-	free /= max;
-#endif
-	return free;
+
+	return scale_irq_capacity(free, irq, max);
 }
 
 void init_max_cpu_capacity(struct max_cpu_capacity *mcc)
