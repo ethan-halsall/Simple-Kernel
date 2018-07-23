@@ -96,6 +96,11 @@ unsigned int sysctl_sched_use_walt_cpu_util = 1;
 unsigned int sysctl_sched_use_walt_task_util = 1;
 #endif
 /*
+ * Enable/disable using cstate knowledge in idle sibling selection
+ */
+unsigned int sysctl_sched_cstate_aware = 1;
+
+/*
  * The initial- and re-scaling of tunables is configurable
  *
  * Options are:
