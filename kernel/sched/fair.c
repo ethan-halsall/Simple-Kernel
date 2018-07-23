@@ -9388,8 +9388,10 @@ void update_group_capacity(struct sched_domain *sd, int cpu)
 			/* Revisit this later. This won't work for MT domain */
 			if (!cpu_isolated(cpumask_first(cpus))) {
 				capacity += sgc->capacity;
-				max_capacity = max(sgc->max_capacity, max_capacity);
-				min_capacity = min(sgc->min_capacity, min_capacity);
+				min_capacity = min(sgc->min_capacity,
+							min_capacity);
+				max_capacity = max(sgc->max_capacity,
+							max_capacity);
 			}
 			group = group->next;
 		} while (group != child->groups);
