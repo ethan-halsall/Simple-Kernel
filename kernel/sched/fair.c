@@ -7267,6 +7267,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	int isolated_candidate = -1;
 	int prev_cpu = task_cpu(p);
 	struct task_struct *curr_tsk;
+	bool next_group_higher_cap = false;
 
 	*backup_cpu = -1;
 
@@ -7564,6 +7565,9 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			target_cpu = i;
 		}
 
+		next_group_higher_cap = (capacity_orig_of(group_first_cpu(sg)) <
+			capacity_orig_of(group_first_cpu(sg->next)));
+
 		/*
 
 		 * If we've found a cpu, but the boost is ON_ALL we continue
@@ -7571,12 +7575,27 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 		 * next cluster if they are higher in capacity. If we are
 		 * not in any kind of boost, we break.
 		 */
-		if ((target_cpu != -1 || best_idle_cpu != -1) &&
+		if (!prefer_idle &&
+			(target_cpu != -1 || best_idle_cpu != -1) &&
 			(fbt_env->placement_boost == SCHED_BOOST_NONE ||
 			(fbt_env->placement_boost == SCHED_BOOST_ON_BIG &&
-				(capacity_orig_of(group_first_cpu(sg)) >
-				capacity_orig_of(group_first_cpu(sg->next))))))
+				!next_group_higher_cap)))
 			break;
+
+		/*
+		 * if we are in prefer_idle and have found an idle cpu,
+		 * break from searching more groups based on the stune.boost and
+		 * group cpu capacity.
+		 */
+		if (prefer_idle && best_idle_cpu != -1) {
+			if (boosted) {
+				if (!next_group_higher_cap)
+					break;
+			} else {
+				if (next_group_higher_cap)
+					break;
+			}
+		}
 
 	} while (sg = sg->next, sg != sd->groups);
 
