@@ -778,7 +778,7 @@
 
 		/* add pingrp for touchscreen */
 		pmx_ts_int_active {
-			ts_int_active: ts_int_active {
+			ts_int_active1: ts_int_active {
 				mux {
 					pins = "gpio122";
 					function = "gpio";
@@ -808,7 +808,7 @@
 		};
 
 		pmx_ts_reset_active {
-			ts_reset_active: ts_reset_active {
+			ts_reset_active1: ts_reset_active {
 				mux {
 					pins = "gpio99";
 					function = "gpio";
@@ -3396,12 +3396,12 @@
 		cam_res_mgr_active: cam_res_mgr_active {
 			/* AVDD_LDO*/
 			mux {
-				pins = "gpio8";
+				pins = "";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio8";
+				pins = "";
 				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 			};
@@ -3410,12 +3410,12 @@
 		cam_res_mgr_suspend: cam_res_mgr_suspend {
 			/* AVDD_LDO */
 			mux {
-				pins = "gpio8";
+				pins = "";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio8";
+				pins = "";
 				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 				output-low;
