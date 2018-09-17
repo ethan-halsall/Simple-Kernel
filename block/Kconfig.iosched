@@ -37,8 +37,9 @@ config IOSCHED_ANXIETY
 	default y
 	---help---
 	  The Anxiety I/O scheduler prioritizes latency over everything
-		else. When a request comes in, it will use a lighweight
-		selection algorithm to swiftly process the current pending task.
+	  else. It uses a simple algorithm that selects from FIFO queues
+	  implemented as doubly linked lists and prioritizes reads over
+	  writes.
 
 config CFQ_GROUP_IOSCHED
 	bool "CFQ Group Scheduling support"
