@@ -6248,6 +6248,35 @@ static inline bool cpu_in_sg(struct sched_group *sg, int cpu)
 static long compute_energy_simplified(struct task_struct *p, int dst_cpu,
 			    struct perf_domain *pd);
 
+int calc_total_energy(struct energy_env *eenv, struct sched_domain *sd,
+		       struct perf_domain *pd)
+{
+	int cpu_idx, cpu;
+
+	if (sched_feat(EAS_SIMPLIFIED_EM) && pd) {
+		for (cpu_idx = EAS_CPU_PRV; cpu_idx < eenv->max_cpu_count; ++cpu_idx) {
+			cpu = eenv->cpu[cpu_idx].cpu_id;
+			if (cpu < 0)
+				continue;
+			eenv->cpu[cpu_idx].energy = compute_energy_simplified(eenv->p, cpu, pd);
+		}
+
+	} else {
+		struct sched_group *sg = sd->groups;
+		do {
+			/* Skip SGs which do not contains a candidate CPU */
+			if (!cpumask_intersects(&eenv->cpus_mask, sched_group_span(sg)))
+				continue;
+
+			eenv->sg_top = sg;
+			if (compute_energy(eenv) == -EINVAL)
+				return EAS_CPU_PRV;
+		} while (sg = sg->next, sg != sd->groups);
+		/* remember - eenv energy values are unscaled */
+	}
+	return 0;
+}
+
 /*
  * select_energy_cpu_idx(): estimate the energy impact of changing the
  * utilization distribution.
@@ -6266,11 +6295,11 @@ static long compute_energy_simplified(struct task_struct *p, int dst_cpu,
 static inline int select_energy_cpu_idx(struct energy_env *eenv)
 {
 	struct sched_domain *sd;
-	struct sched_group *sg;
 	struct perf_domain *pd;
 	int sd_cpu = -1;
 	int cpu_idx;
 	int margin;
+	int ret;
 
 	sd_cpu = eenv->cpu[EAS_CPU_PRV].cpu_id;
 	sd = rcu_dereference(per_cpu(sd_ea, sd_cpu));
@@ -6286,24 +6315,11 @@ static inline int select_energy_cpu_idx(struct energy_env *eenv)
 		if (cpu < 0)
 			continue;
 		cpumask_set_cpu(cpu, &eenv->cpus_mask);
-
-		if (sched_feat(EAS_SIMPLIFIED_EM) && pd)
-			eenv->cpu[cpu_idx].energy = compute_energy_simplified(eenv->p, cpu, pd);
 	}
 
-	if (!sched_feat(EAS_SIMPLIFIED_EM)) {
-		sg = sd->groups;
-		do {
-			/* Skip SGs which do not contains a candidate CPU */
-			if (!cpumask_intersects(&eenv->cpus_mask, sched_group_span(sg)))
-				continue;
-
-
-			eenv->sg_top = sg;
-			if (compute_energy(eenv) == -EINVAL)
-				return EAS_CPU_PRV;
-		} while (sg = sg->next, sg != sd->groups);
-	}
+	ret = calc_total_energy(eenv, sd, pd);
+	if (ret)
+		return ret;
 
 	/* Scale energy before comparisons */
 	for (cpu_idx = EAS_CPU_PRV; cpu_idx < EAS_CPU_CNT; ++cpu_idx)
