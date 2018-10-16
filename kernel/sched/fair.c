@@ -5199,6 +5199,24 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
+#ifdef CONFIG_SMP
+static inline unsigned long cpu_util(int cpu);
+static unsigned long capacity_of(int cpu);
+
+static inline bool cpu_overutilized(int cpu)
+{
+	return (capacity_of(cpu) * 1024) < (cpu_util(cpu) * capacity_margin);
+}
+
+static inline void update_overutilized_status(struct rq *rq)
+{
+	if (!READ_ONCE(rq->rd->overutilized) && cpu_overutilized(rq->cpu))
+		WRITE_ONCE(rq->rd->overutilized, SG_OVERUTILIZED);
+}
+#else
+static inline void update_overutilized_status(struct rq *rq) { }
+#endif
+
 /*
  * The enqueue_task method is called before nr_running is
  * increased. Here we update the fair scheduling stats and
@@ -5284,24 +5302,24 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 
 	if (!se) {
 		add_nr_running(rq, 1);
+		/*
+		 * Since new tasks are assigned an initial util_avg equal to
+		 * half of the spare capacity of their CPU, tiny tasks have the
+		 * ability to cross the overutilized threshold, which will
+		 * result in the load balancer ruining all the task placement
+		 * done by EAS. As a way to mitigate that effect, do not account
+		 * for the first enqueue operation of new tasks during the
+		 * overutilized flag detection.
+		 *
+		 * A better way of solving this problem would be to wait for
+		 * the PELT signals of tasks to converge before taking them
+		 * into account, but that is not straightforward to implement,
+		 * and the following generally works well enough in practice.
+		 */
+		if (flags & ENQUEUE_WAKEUP)
+			update_overutilized_status(rq);
 
-		if (unlikely(p->nr_cpus_allowed == 1))
-			rq->nr_pinned_tasks++;
-
-		inc_rq_walt_stats(rq, p);
 	}
-
-#ifdef CONFIG_SMP
-
-	if (!se) {
-		if (!task_new && !rq->rd->overutilized &&
-		    cpu_overutilized(rq->cpu)) {
-			rq->rd->overutilized = true;
-			trace_sched_overutilized(true);
-		}
-	}
-
-#endif /* CONFIG_SMP */
 
 	if (cfs_bandwidth_used()) {
 		/*
@@ -6555,23 +6573,6 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	}
 
 	return __task_fits(p, cpu, 0);
-}
-
-static inline bool cpu_check_overutil_condition(int cpu,
-						unsigned long util)
-{
-	return (capacity_orig_of(cpu) * 1024) < (util * capacity_margin);
-}
-
-bool __cpu_overutilized(int cpu, int delta)
-{
-	return (capacity_orig_of(cpu) * 1024) <
-			((cpu_util(cpu) + delta) * capacity_margin);
-}
-
-bool cpu_overutilized(int cpu)
-{
-	return __cpu_overutilized(cpu, 0);
 }
 
 #ifdef CONFIG_SCHED_TUNE
@@ -8018,14 +8019,6 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu,
 			p->state == TASK_WAKING)
 			delta = task_util_est(p);
 #endif
-		/* Not enough spare capacity on previous cpu */
-		if (__cpu_overutilized(prev_cpu, delta)) {
-			schedstat_inc(p->se.statistics.nr_wakeups_secb_insuff_cap);
-			schedstat_inc(this_rq()->eas_stats.secb_insuff_cap);
-			target_cpu = next_cpu;
-			goto unlock;
-		}
-
 		/* Check if EAS_CPU_NXT is a more energy efficient CPU */
 		if (select_energy_cpu_idx(&eenv) != EAS_CPU_PRV) {
 			schedstat_inc(p->se.statistics.nr_wakeups_secb_nrg_sav);
@@ -9807,6 +9800,9 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		if (nr_running > 1)
 			*sg_status |= SG_OVERLOAD;
 
+		if (cpu_overutilized(i))
+			*sg_status |= SG_OVERUTILIZED;
+
 #ifdef CONFIG_NUMA_BALANCING
 		sgs->nr_numa_running += rq->nr_numa_running;
 		sgs->nr_preferred_running += rq->nr_preferred_running;
@@ -10085,19 +10081,14 @@ next_group:
 	env->src_grp_nr_running = sds->busiest_stat.sum_nr_running;
 
 	if (!lb_sd_parent(env->sd)) {
+		struct root_domain *rd = env->dst_rq->rd;
 		/* update overload indicator if we are at root domain */
-		WRITE_ONCE(env->dst_rq->rd->overload, sg_status & SG_OVERLOAD);
+		WRITE_ONCE(rd->overload, sg_status & SG_OVERLOAD);
 
 		/* Update over-utilization (tipping point, U >= 0) indicator */
-		if (env->dst_rq->rd->overutilized != overutilized) {
-			env->dst_rq->rd->overutilized = overutilized;
-			trace_sched_overutilized(overutilized);
-		}
-	} else {
-		if (!env->dst_rq->rd->overutilized && overutilized) {
-			env->dst_rq->rd->overutilized = true;
-			trace_sched_overutilized(true);
-		}
+		WRITE_ONCE(rd->overutilized, sg_status & SG_OVERUTILIZED);
+	} else if (sg_status & SG_OVERUTILIZED) {
+		WRITE_ONCE(env->dst_rq->rd->overutilized, SG_OVERUTILIZED);
 	}
 }
 
@@ -10331,6 +10322,7 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 {
 	struct sg_lb_stats *local, *busiest;
 	struct sd_lb_stats sds;
+	struct root_domain *rd = env->dst_rq->rd;
 
 	init_sd_lb_stats(&sds);
 
@@ -10340,29 +10332,9 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	 */
 	update_sd_lb_stats(env, &sds);
 
-	if (energy_aware() && !env->dst_rq->rd->overutilized) {
-		int cpu_local, cpu_busiest;
-		unsigned long energy_local, energy_busiest;
 
-		if (env->idle != CPU_NEWLY_IDLE)
-			goto out_balanced;
-
-		if (!sds.local || !sds.busiest)
-			goto out_balanced;
-
-		cpu_local = group_first_cpu(sds.local);
-		cpu_busiest = group_first_cpu(sds.busiest);
-
-		 /* TODO: don't assume same energy cpus are in same domain */
-		energy_local = cpu_max_power_cost(cpu_local);
-		energy_busiest = cpu_max_power_cost(cpu_busiest);
-		if (energy_local > energy_busiest) {
-			goto out_balanced;
-		} else if (energy_local == energy_busiest) {
-			if (cpu_rq(cpu_busiest)->nr_running < 2)
-				goto out_balanced;
-		}
-	}
+	if (rcu_dereference(rd->pd) && !READ_ONCE(rd->overutilized))
+		goto out_balanced;
 
 	local = &sds.local_stat;
 	busiest = &sds.busiest_stat;
@@ -11913,16 +11885,8 @@ static void task_tick_fair(struct rq *rq, struct task_struct *curr, int queued)
 	if (static_branch_unlikely(&sched_numa_balancing))
 		task_tick_numa(rq, curr);
 
-#ifdef CONFIG_SMP
-	if (!rq->rd->overutilized && cpu_overutilized(task_cpu(curr))) {
-		rq->rd->overutilized = true;
-		trace_sched_overutilized(true);
-	}
-
 	update_misfit_status(curr, rq);
-
-#endif
-	walt_update_misfit_task(rq, curr);
+	update_overutilized_status(task_rq(curr));
 }
 
 /*

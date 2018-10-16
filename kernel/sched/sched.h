@@ -707,6 +707,7 @@ struct perf_domain {
 
 /* Scheduling group status flags */
 #define SG_OVERLOAD		0x1 /* More than one runnable task on a CPU. */
+#define SG_OVERUTILIZED		0x2 /* One or more CPUs are over-utilized. */
 
 /*
  * We add the notion of a root-domain which will be used to define per-domain
@@ -1765,9 +1766,6 @@ extern void update_group_capacity(struct sched_domain *sd, int cpu);
 extern void trigger_load_balance(struct rq *rq);
 
 extern void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_mask);
-
-bool __cpu_overutilized(int cpu, int delta);
-bool cpu_overutilized(int cpu);
 
 #endif
 
