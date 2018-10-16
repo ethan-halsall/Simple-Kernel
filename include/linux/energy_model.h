@@ -68,12 +68,6 @@ struct em_perf_domain *em_cpu_get(int cpu);
 int em_register_perf_domain(cpumask_t *span, unsigned int nr_states,
 						struct em_data_callback *cb);
 
-static inline unsigned long map_util_freq(unsigned long util,
-                                       unsigned long freq, unsigned long cap)
-{
-	return (freq + (freq >> 2)) * util / cap;
-}
-
 /**
  * em_pd_energy() - Estimates the energy consumed by the CPUs of a perf. domain
  * @pd		: performance domain for which energy has to be estimated
