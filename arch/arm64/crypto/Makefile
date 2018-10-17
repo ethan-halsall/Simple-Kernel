@@ -40,7 +40,8 @@ CFLAGS_aes-glue-ce.o	:= -DUSE_V8_CRYPTO_EXTENSIONS
 
 obj-$(CONFIG_CRYPTO_CRC32_ARM64) += crc32-arm64.o
 
-CFLAGS_crc32-arm64.o	:= -mcpu=generic+crc
+# FIXME : error: switch -mcpu=armv8-a conflicts with -march=armv8.2-a switch
+CFLAGS_crc32-arm64.o	+= $(call cc-ifversion, -lt, 0700, -mcpu=generic+crc)
 
 $(obj)/aes-glue-%.o: $(src)/aes-glue.c FORCE
 	$(call if_changed_rule,cc_o_c)

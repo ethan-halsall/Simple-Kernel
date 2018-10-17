@@ -75,6 +75,32 @@ LD		+= -EL
 UTS_MACHINE	:= aarch64
 endif
 
+# SDM845 Optimization
+ifeq ($(cc-name),clang)
+KBUILD_CFLAGS	+=	$(call cc-option,-mllvm -polly,) \
+					$(call cc-option,-mllvm -polly-run-dce,) \
+					$(call cc-option,-mllvm -polly-run-inliner,) \
+					$(call cc-option,-mllvm -polly-opt-fusion=max,) \
+					$(call cc-option,-mllvm -polly-ast-use-context,) \
+					$(call cc-option,-mllvm -polly-vectorizer=stripmine,) \
+					$(call cc-option,-mllvm -polly-detect-keep-going)
+endif
+
+KBUILD_CFLAGS	+=	$(call cc-option,-mcpu=cortex-a75.cortex-a55,) \
+					$(call cc-option,-march=armv8.2-a,) \
+					$(call cc-option,-mtune=cortex-a75.cortex-a55,) \
+					$(call cc-option,-g0)
+
+KBUILD_AFLAGS	+=	$(call cc-option,-mcpu=cortex-a75.cortex-a55,) \
+					$(call cc-option,-march=armv8.2-a,) \
+					$(call cc-option,-mtune=cortex-a75.cortex-a55,) \
+					$(call cc-option,-g0)
+
+# Optimize our linker too
+KBUILD_LDFLAGS	+= $(call ld-option, -z combreloc,)
+KBUILD_LDFLAGS	+= $(call ld-option, --strip-debug,)
+KBUILD_LDFLAGS_vmlinux	+= $(call ld-option, --relax)
+
 CHECKFLAGS	+= -D__aarch64__
 
 ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
