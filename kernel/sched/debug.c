@@ -1105,6 +1105,10 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
 #endif
 	P(policy);
 	P(prio);
+	if (task_has_dl_policy(p)) {
+		P(dl.runtime);
+		P(dl.deadline);
+	}
 #undef PN_SCHEDSTAT
 #undef PN
 #undef __PN
