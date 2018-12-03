@@ -162,7 +162,7 @@ static struct em_perf_domain *em_create_pd(cpumask_t *span, int nr_states,
 		 */
 		opp_eff = freq / power;
 		if (opp_eff >= prev_opp_eff)
-			pr_warn("pd%d: hertz/watts ratio non-monotonically decreasing: OPP%d >= OPP%d\n",
+			pr_warn("pd%d: hertz/watts ratio non-monotonically decreasing: em_cap_state %d >= em_cap_state%d\n",
 					cpu, i, i - 1);
 		prev_opp_eff = opp_eff;
 	}
@@ -177,11 +177,6 @@ static struct em_perf_domain *em_create_pd(cpumask_t *span, int nr_states,
 	pd->table = table;
 	pd->nr_cap_states = nr_states;
 	cpumask_copy(to_cpumask(pd->cpus), span);
-
-	ret = kobject_init_and_add(&pd->kobj, &ktype_em_pd, em_kobject,
-				   "pd%u", cpu);
-	if (ret)
-		pr_err("pd%d: failed kobject_init_and_add(): %d\n", cpu, ret);
 
 	return pd;
 
@@ -273,8 +268,14 @@ int em_register_perf_domain(cpumask_t *span, unsigned int nr_states,
 		goto unlock;
 	}
 
-	for_each_cpu(cpu, span)
-		WRITE_ONCE(per_cpu(em_data, cpu), pd);
+	for_each_cpu(cpu, span) {
+		/*
+		 * The per-cpu array can be read concurrently from em_cpu_get().
+		 * The barrier enforces the ordering needed to make sure readers
+		 * can only access well formed em_perf_domain structs.
+		 */
+		smp_store_release(per_cpu_ptr(&em_data, cpu), pd);
+	}
 
 	pr_debug("Created perf domain %*pbl\n", cpumask_pr_args(span));
 unlock:
