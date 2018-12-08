@@ -282,13 +282,13 @@ config WAKE_BOOST_DURATION_MS
 	  Wake boost duration in milliseconds.
 
 config INPUT_BOOST_FREQ_LP
-	int "Low-power cluster boost freq"
+	int "Low-power cluster input boost freq"
 	default "0"
 	help
 	  Input boost frequency for the low-power CPU cluster.
 
 config INPUT_BOOST_FREQ_PERF
-	int "Performance cluster boost freq"
+	int "Performance cluster input boost freq"
 	default "0"
 	help
 	  Input boost frequency for the performance CPU cluster.
@@ -312,6 +312,18 @@ config REMOVE_INPUT_BOOST_FREQ_PERF
 	  use cpuinfo.min_freq. In case the device has some kind of quirk
 	  of using a higher than cpuinfo.min_freq (e.g. OnePlus 5/5T/6)
 	  this frequency will be used.
+
+config GENERAL_BOOST_FREQ_LP
+	int "Low-power cluster general boost freq"
+	default "0"
+	help
+	  General boost frequency for the low-power CPU cluster.
+
+config GENERAL_BOOST_FREQ_PERF
+	int "Performance cluster general boost freq"
+	default "0"
+	help
+	  General boost frequency for the performance CPU cluster.
 
 endif
 
