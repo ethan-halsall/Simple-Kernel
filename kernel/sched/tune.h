@@ -24,6 +24,7 @@ void schedtune_exit_task(struct task_struct *tsk);
 
 void schedtune_enqueue_task(struct task_struct *p, int cpu);
 void schedtune_dequeue_task(struct task_struct *p, int cpu);
+unsigned long boosted_cpu_util(int cpu, unsigned long other_util);
 
 #else /* CONFIG_CGROUP_SCHEDTUNE */
 
@@ -54,5 +55,6 @@ int schedtune_accept_deltas(int nrg_delta, int cap_delta,
 #define schedtune_dequeue_task(task, cpu) do { } while (0)
 
 #define schedtune_accept_deltas(nrg_delta, cap_delta, task) nrg_delta
+#define boosted_cpu_util(cpu, other_util) cpu_util_cfs(cpu_rq(cpu))
 
 #endif /* CONFIG_SCHED_TUNE */

@@ -3214,14 +3214,14 @@ enum schedutil_type {
 	ENERGY_UTIL,
 };
 
-unsigned long schedutil_freq_util(int cpu, unsigned long util_cfs,
+unsigned long schedutil_freq_util(int cpu, unsigned long util,
 	              unsigned long max, enum schedutil_type type);
 
-static inline unsigned long schedutil_energy_util(int cpu, unsigned long cfs)
+static inline unsigned long schedutil_energy_util(int cpu, unsigned long util)
 {
 	unsigned long max = arch_scale_cpu_capacity(NULL, cpu);
 
-	return schedutil_freq_util(cpu, cfs, max, ENERGY_UTIL);
+	return schedutil_freq_util(cpu, util, max, ENERGY_UTIL);
 }
 #endif /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
 static inline unsigned long cpu_bw_dl(struct rq *rq)
@@ -3236,5 +3236,12 @@ static inline unsigned long cpu_util_dl(struct rq *rq)
 
 static inline unsigned long cpu_util_cfs(struct rq *rq)
 {
-	return rq->cfs.avg.util_avg;
+	unsigned long util = READ_ONCE(rq->cfs.avg.util_avg);
+
+	if (sched_feat(UTIL_EST)) {
+		util = max_t(unsigned long, util,
+				READ_ONCE(rq->cfs.avg.util_est.enqueued));
+	}
+
+	return util;
 }

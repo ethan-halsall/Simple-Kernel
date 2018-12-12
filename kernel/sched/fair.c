@@ -5175,14 +5175,6 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
-#ifdef CONFIG_SMP
-static unsigned long capacity_orig_of(int cpu);
-static unsigned long cpu_util(int cpu);
-static inline unsigned long boosted_cpu_util(int cpu);
-#else
-#define boosted_cpu_util(cpu) cpu_util_freq(cpu)
-#endif
-
 /*
  * The enqueue_task method is called before nr_running is
  * increased. Here we update the fair scheduling stats and
@@ -6632,18 +6624,15 @@ schedtune_task_margin(struct task_struct *p)
 
 #endif /* CONFIG_SCHED_TUNE */
 
-static inline unsigned long
-boosted_cpu_util(int cpu)
+unsigned long
+boosted_cpu_util(int cpu, unsigned long other_util)
 {
-	unsigned long util = cpu_util_freq(cpu, NULL);
+	unsigned long util = cpu_util_cfs(cpu_rq(cpu)) + other_util;
 	long margin = schedtune_cpu_margin(util, cpu);
 
 	trace_sched_boost_cpu(cpu, util, margin);
 
-	if (sched_feat(SCHEDTUNE_BOOST_UTIL))
 		return util + margin;
-	else
-		return util;
 }
 
 static inline unsigned long
@@ -6654,10 +6643,7 @@ boosted_task_util(struct task_struct *p)
 
 	trace_sched_boost_task(p, util, margin);
 
-	if (sched_feat(SCHEDTUNE_BOOST_UTIL))
 		return util + margin;
-	else
-		return util;
 }
 
 static unsigned long cpu_util_without(int cpu, struct task_struct *p);
@@ -8079,12 +8065,6 @@ static unsigned long cpu_util_next(int cpu, struct task_struct *p, int dst_cpu)
 	return min_t(unsigned long, util, capacity_orig_of(cpu));
 }
 
-unsigned long sched_get_rt_rq_util(int cpu)
-{
-	struct rq *rq = cpu_rq(cpu);
-	return cpu_util_rt(rq);
-}
-
 /*
  * compute_energy_simplified(): Estimates the energy that would be consumed
  * if @p was migrated to @dst_cpu. compute_energy_simplified() predicts what
@@ -8112,7 +8092,8 @@ static long compute_energy_simplified(struct task_struct *p, int dst_cpu,
 		 */
 		for_each_cpu_and(cpu, perf_domain_span(pd), cpu_online_mask) {
 			util = cpu_util_next(cpu, p, dst_cpu);
-			util += sched_get_rt_rq_util(cpu);
+			util += cpu_util_rt(cpu_rq(cpu));
+			util = schedutil_energy_util(cpu, util);
 			max_util = max(util, max_util);
 			sum_util += util;
 		}
@@ -9483,10 +9464,9 @@ static inline int get_sd_load_idx(struct sched_domain *sd,
 	return load_idx;
 }
 
-static unsigned long scale_rt_capacity(int cpu)
+static unsigned long scale_rt_capacity(int cpu, unsigned long max)
 {
 	struct rq *rq = cpu_rq(cpu);
-	unsigned long max = arch_scale_cpu_capacity(NULL, cpu);
 	unsigned long used, free;
 	unsigned long irq;
 
@@ -9547,6 +9527,7 @@ static void update_cpu_capacity(struct sched_domain *sd, int cpu)
 	raw_spin_unlock_irqrestore(&mcc->lock, flags);
 
 skip_unlock: __attribute__ ((unused));
+	capacity = scale_rt_capacity(cpu, capacity);
 
 	if (!capacity)
 		capacity = 1;
