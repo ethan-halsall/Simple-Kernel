@@ -39,8 +39,7 @@ TRACE_EVENT(swiotlb_bounced,
 		__entry->size,
 		__print_symbolic(__entry->swiotlb_force,
 			{ SWIOTLB_NORMAL,	"NORMAL" },
-			{ SWIOTLB_FORCE,	"FORCE" },
-			{ SWIOTLB_NO_FORCE,	"NO_FORCE" }))
+			{ SWIOTLB_FORCE,	"FORCE" }))
 );
 
 #endif /*  _TRACE_SWIOTLB_H */
