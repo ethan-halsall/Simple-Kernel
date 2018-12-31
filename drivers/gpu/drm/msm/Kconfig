@@ -154,3 +154,10 @@ config DRM_SDE_XLOG_DEBUG
 	default n
 	depends on DRM_MSM
 
+config EXPOSURE_ADJUSTMENT
+	bool "Enable exposure adjustment driver"
+	depends on DRM_MSM
+	help
+          The EXPOSURE ADJUSTMENT provides exposure adjustment function without change
+          panel hardware brightness to avoid PWM flicker on OLED devices.
+
