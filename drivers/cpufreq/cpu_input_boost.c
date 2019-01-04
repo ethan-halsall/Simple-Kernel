@@ -57,13 +57,13 @@ static struct boost_drv *boost_drv_g __read_mostly;
 static u32 get_boost_freq(struct boost_drv *b, u32 cpu, u32 state)
 {
 	if (state & INPUT_BOOST) {
-		if (cpumask_test_cpu(cpu, cpu_cpu_mask))
+		if (cpumask_test_cpu(cpu, cpu_lp_mask))
 			return input_boost_freq_lp;
 
 		return input_boost_freq_hp;
 	}
 
-	if (cpumask_test_cpu(cpu, cpu_cpu_mask))
+	if (cpumask_test_cpu(cpu, cpu_lp_mask))
 		return general_boost_freq_lp;
 
 	return general_boost_freq_hp;
@@ -71,7 +71,7 @@ static u32 get_boost_freq(struct boost_drv *b, u32 cpu, u32 state)
 
 static u32 get_min_freq(struct boost_drv *b, u32 cpu)
 {
-	if (cpumask_test_cpu(cpu, cpu_cpu_mask))
+	if (cpumask_test_cpu(cpu, cpu_lp_mask))
 		return remove_input_boost_freq_lp;
 
 	return remove_input_boost_freq_perf;
@@ -292,7 +292,7 @@ static int msm_drm_notifier_cb(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	/* Boost when the screen turns on and unboost when it turns off */
-	if (*blank == MSM_DRM_BLANK_UNBLANK) {
+	if (*blank == MSM_DRM_BLANK_UNBLANK_CUST) {
 		set_boost_bit(b, SCREEN_AWAKE);
 		__cpu_input_boost_kick_max(b, CONFIG_WAKE_BOOST_DURATION_MS);
 	} else {
