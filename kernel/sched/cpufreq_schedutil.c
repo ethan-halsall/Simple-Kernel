@@ -138,9 +138,6 @@ static bool sugov_update_next_freq(struct sugov_policy *sg_policy, u64 time,
         }
 
 	if (sg_policy->next_freq == next_freq)
-		return false;
-
-	if (sg_policy->next_freq == next_freq)
 		return;
 
 	sg_policy->next_freq = next_freq;
