@@ -1410,8 +1410,6 @@ static int cpufreq_online(unsigned int cpu)
 	if (ret) {
 		pr_err("%s: Failed to initialize policy for cpu: %d (%d)\n",
 		       __func__, cpu, ret);
-		/* cpufreq_policy_free() will notify based on this */
-		new_policy = false;
 		goto out_destroy_policy;
 	}
 
