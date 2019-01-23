@@ -876,6 +876,7 @@ static void update_rq_clock_task(struct rq *rq, s64 delta)
 		update_irq_load_avg(rq, irq_delta + steal);
 
 #endif
+		update_rq_clock_pelt(rq, delta);
 }
 
 void sched_set_stop_task(int cpu, struct task_struct *stop)
