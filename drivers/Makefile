@@ -181,3 +181,7 @@ obj-$(CONFIG_SENSORS_SSC)		+= sensors/
 obj-$(CONFIG_TEE)		+= tee/
 obj-$(CONFIG_BCM_GPS_SPI_DRIVER) += gps/
 obj-$(CONFIG_HALLS)		+= halls/
+
+# DTS_EAGLE START
+obj-$(CONFIG_AINUR_DTS_SW) += dts_eagle/
+# DTS_EAGLE END
