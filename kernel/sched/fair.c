@@ -6209,14 +6209,15 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	if (capacity == max_capacity)
 		return true;
 
-	if (task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
-			schedtune_task_boost(p) > 0)
+	if ((task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
+		schedtune_task_boost(p) > 0) &&
+		is_min_capacity_cpu(cpu))
 		return false;
 
 	return __task_fits(p, cpu, 0);
 }
 
-bool __cpu_overutilized(int cpu, int delta)
+bool __cpu_overutilized(int cpu, int delta)S
 {
 	return (capacity_orig_of(cpu) * 1024) <
 			((cpu_util(cpu) + delta) * capacity_margin);
