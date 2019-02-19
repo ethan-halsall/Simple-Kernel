@@ -2465,26 +2465,18 @@ int cpufreq_update_policy(unsigned int cpu)
 		goto unlock;
 	}
 
-	pr_debug("updating policy for CPU %u\n", cpu);
-	memcpy(&new_policy, policy, sizeof(*policy));
-	new_policy.min = policy->user_policy.min;
-	new_policy.max = policy->user_policy.max;
-
 	/*
 	 * BIOS might change freq behind our back
 	 * -> ask driver for current freq and notify governors about a change
 	 */
-	if (cpufreq_driver->get && !cpufreq_driver->setpolicy) {
-		if (cpufreq_suspended) {
-			ret = -EAGAIN;
-			goto unlock;
-		}
-		new_policy.cur = cpufreq_update_current_freq(policy);
-		if (WARN_ON(!new_policy.cur)) {
-			ret = -EIO;
-			goto unlock;
-		}
-	}
+	if (cpufreq_driver->get && !cpufreq_driver->setpolicy &&
+	    (cpufreq_suspended || WARN_ON(!cpufreq_update_current_freq(policy))))
+		goto unlock;
+
+	pr_debug("updating policy for CPU %u\n", cpu);
+	memcpy(&new_policy, policy, sizeof(*policy));
+	new_policy.min = policy->user_policy.min;
+	new_policy.max = policy->user_policy.max;
 
 	ret = cpufreq_set_policy(policy, &new_policy);
 
