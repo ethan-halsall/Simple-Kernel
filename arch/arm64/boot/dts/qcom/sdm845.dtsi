@@ -3179,6 +3179,140 @@
 		};
 	};
 
+	qcom,msm-thermal-simple {
+		compatible = "qcom,msm-thermal-simple";
+		qcom,thermal-vadc = <&pm8998_vadc>;
+		qcom,adc-channel = <0x4c>;
+		qcom,poll-ms = <3000>;
+		qcom,start-delay = <60>;
+
+		zone@0 {
+			reg = <0>;
+			qcom,silver-khz = <1766400>;
+			qcom,gold-khz = <2246400>;
+			qcom,trip-deg = <40000>;
+		};
+
+		zone@1 {
+			reg = <1>;
+			qcom,silver-khz = <1766400>;
+			qcom,gold-khz = <2169600>;
+			qcom,trip-deg = <41500>;
+		};
+
+		zone@2 {
+			reg = <2>;
+			qcom,silver-khz = <1766400>;
+			qcom,gold-khz = <2092800>;
+			qcom,trip-deg = <43000>;
+		};
+
+		zone@3 {
+			reg = <3>;
+			qcom,silver-khz = <1766400>;
+			qcom,gold-khz = <1996800>;
+			qcom,trip-deg = <44500>;
+		};
+
+		zone@4 {
+			reg = <4>;
+			qcom,silver-khz = <1689600>;
+			qcom,gold-khz = <1920000>;
+			qcom,trip-deg = <46000>;
+		};
+
+		zone@5 {
+			reg = <5>;
+			qcom,silver-khz = <1612800>;
+			qcom,gold-khz = <1843200>;
+			qcom,trip-deg = <47500>;
+		};
+
+		zone@6 {
+			reg = <6>;
+			qcom,silver-khz = <1516800>;
+			qcom,gold-khz = <1766400>;
+			qcom,trip-deg = <49000>;
+		};
+
+		zone@7 {
+			reg = <7>;
+			qcom,silver-khz = <1420800>;
+			qcom,gold-khz = <1689600>;
+			qcom,trip-deg = <50500>;
+		};
+
+		zone@8 {
+			reg = <8>;
+			qcom,silver-khz = <1420800>;
+			qcom,gold-khz = <1612800>;
+			qcom,trip-deg = <52000>;
+		};
+
+		zone@9 {
+			reg = <9>;
+			qcom,silver-khz = <1324800>;
+			qcom,gold-khz = <1536000>;
+			qcom,trip-deg = <53500>;
+		};
+
+		zone@10 {
+			reg = <10>;
+			qcom,silver-khz = <1324800>;
+			qcom,gold-khz = <1459200>;
+			qcom,trip-deg = <55000>;
+		};
+
+		zone@11 {
+			reg = <11>;
+			qcom,silver-khz = <1324800>;
+			qcom,gold-khz = <1363200>;
+			qcom,trip-deg = <56000>;
+		};
+
+		zone@12 {
+			reg = <12>;
+			qcom,silver-khz = <1324800>;
+			qcom,gold-khz = <1286400>;
+			qcom,trip-deg = <57000>;
+		};
+
+		zone@13 {
+			reg = <13>;
+			qcom,silver-khz = <1324800>;
+			qcom,gold-khz = <1209600>;
+			qcom,trip-deg = <58000>;
+		};
+
+		zone@14 {
+			reg = <14>;
+			qcom,silver-khz = <1228800>;
+			qcom,gold-khz = <1056000>;
+			qcom,trip-deg = <59000>;
+		};
+
+		zone@15 {
+			reg = <15>;
+			qcom,silver-khz = <1132800>;
+			qcom,gold-khz = <979200>;
+			qcom,trip-deg = <60000>;
+		};
+
+		zone@16 {
+			reg = <16>;
+			qcom,silver-khz = <1056000>;
+			qcom,gold-khz = <902400>;
+			qcom,trip-deg = <65000>;
+		};
+
+		zone@17 {
+			reg = <17>;
+			qcom,silver-khz = <979200>;
+			qcom,gold-khz = <825600>;
+			qcom,trip-deg = <70000>;
+		};
+	};
+
 	thermal_zones: thermal-zones {
 		aoss0-usr {
 			polling-delay-passive = <0>;
