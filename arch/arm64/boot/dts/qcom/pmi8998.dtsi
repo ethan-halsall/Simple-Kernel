@@ -1,5 +1,4 @@
 /* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -285,6 +284,7 @@
 			qcom,fg-esr-timer-asleep = <256 256>;
 			qcom,fg-esr-timer-charging = <0 96>;
 			qcom,cycle-counter-en;
+			qcom,hold-soc-while-full;
 			qcom,fg-auto-recharge-soc;
 			qcom,fg-recharge-soc-thr = <98>;
 			status = "okay";
@@ -577,6 +577,7 @@
 			qcom,en-ext-pfet-sc-pro;
 			qcom,pmic-revid = <&pmi8998_revid>;
 			qcom,loop-auto-gm-en;
+			qcom,auto-calibration-enable;
 			status = "disabled";
 		};
 
@@ -868,6 +869,7 @@
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pmi8998_tz>;
+		disable-thermal-zone;
 
 		trips {
 			pmi8998_trip0: pmi8998-trip0 {
