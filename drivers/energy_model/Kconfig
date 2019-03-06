@@ -14,3 +14,8 @@ config LEGACY_ENERGY_MODEL_DT
 	  ignored.
 
 	  If in doubt, say N.
+
+config LEGACY_EM_FREQ_TUPLE
+	bool "Frequency-power tuples format for legacy DT EMs"
+	depends on LEGACY_ENERGY_MODEL_DT
+	default n

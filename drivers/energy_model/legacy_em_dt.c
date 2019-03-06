@@ -62,7 +62,8 @@ static int init_em_dt_callback(struct notifier_block *nb, unsigned long val,
 			       void *data)
 {
 	struct em_data_callback em_cb = EM_DATA_CB(get_power);
-	unsigned long nstates, scale_cpu, max_freq;
+	unsigned long nstates, max_freq, nr_opp;
+	unsigned long __maybe_unused scale_cpu;
 	struct cpufreq_policy *policy = data;
 	const struct property *prop;
 	struct device_node *cn, *cp;
@@ -113,13 +114,28 @@ static int init_em_dt_callback(struct notifier_block *nb, unsigned long val,
 		goto unlock;
 	}
 
-	nstates = (prop->length / sizeof(u32)) / 2;
+	nstates = nr_opp = (prop->length / sizeof(u32)) / 2;
 	em = kcalloc(nstates, sizeof(struct em_cap_state), GFP_KERNEL);
 	if (!em) {
 		ret = -ENOMEM;
 		goto unlock;
 	}
+#ifdef CONFIG_LEGACY_EM_FREQ_TUPLE
+	/* Copy the frequency and power cost to the table. */
+	for (i = 0, tmp = prop->value; i < nstates; i++) {
+		unsigned long freq = be32_to_cpup(tmp++);
+		unsigned long power = be32_to_cpup(tmp++);
 
+		/* Avoid OPPs out of the current speedbin */
+		if (freq > max_freq) {
+			nr_opp--;
+			continue;
+		}
+
+		em[i].frequency = freq;
+		em[i].power = power;
+	}
+#else
 	/* Copy the capacity and power cost to the table. */
 	for (i = 0, tmp = prop->value; i < nstates; i++) {
 		em[i].capacity = be32_to_cpup(tmp++);
@@ -138,15 +154,16 @@ static int init_em_dt_callback(struct notifier_block *nb, unsigned long val,
 	/* Re-compute the intermediate frequencies based on the EM. */
 	for (i = 0; i < nstates; i++)
 		em[i].frequency = em[i].capacity * max_freq / scale_cpu;
+#endif
 
 	/* Assign the table to all CPUs of this policy. */
 	for_each_cpu(i, policy->cpus) {
-		per_cpu(nr_states, i) = nstates;
+		per_cpu(nr_states, i) = nr_opp;
 		per_cpu(cpu_em, i) = em;
 	}
 
 	pr_info("Registering EM of %*pbl\n", cpumask_pr_args(policy->cpus));
-	em_register_perf_domain(policy->cpus, nstates, &em_cb);
+	em_register_perf_domain(policy->cpus, nr_opp, &em_cb);
 
 	/* Finish the work when all possible CPUs have been registered. */
 	cpumask_andnot(cpus_to_visit, cpus_to_visit, policy->cpus);
