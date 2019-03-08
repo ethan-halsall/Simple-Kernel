@@ -104,7 +104,7 @@ static int cpu_notifier_cb(struct notifier_block *nb, unsigned long val,
 	struct cpufreq_policy *policy = data;
 	struct thermal_zone *zone;
 
-	if (val != CPUFREQ_ADJUST)
+	if (val != CPUFREQ_INCOMPATIBLE)
 		return NOTIFY_OK;
 
 	zone = t->curr_zone;
