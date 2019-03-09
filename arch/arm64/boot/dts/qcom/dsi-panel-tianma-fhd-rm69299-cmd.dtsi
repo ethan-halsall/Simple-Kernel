@@ -32,7 +32,7 @@
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
 		qcom,ulps-enabled;
-		qcom,mdss-dsi-lp11-init;
+ 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -58,6 +58,8 @@
 		qcom,mdss-dsi-panel-blackness-level = <3230>;
 		qcom,dispparam-enabled;
 		/* qcom,esd-err-irq-gpio = <&tlmm 52 0>; */
+ 		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 		qcom,mdss-dsi-display-timings {
 			timing@0{
 				qcom,mdss-dsi-panel-width = <1080>;

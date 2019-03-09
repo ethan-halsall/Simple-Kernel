@@ -43,10 +43,14 @@
 		qcom,mdss-dsi-te-dcs-command = <1>;
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
-		qcom,mdss-dsi-lp11-init;
+ 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <255>;
+
+		qcom,ulps-enabled;
+ 		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 
 		qcom,mdss-dsi-display-timings {
 			timing@0{

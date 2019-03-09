@@ -32,7 +32,7 @@
 		qcom,mdss-dsi-traffic-mode = "burst_mode";
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
-		qcom,mdss-dsi-lp11-init;
+ 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -58,6 +58,9 @@
 		qcom,mdss-dsi-tx-eot-append;
 		qcom,mdss-panel-on-dimming-delay = <120>;
 		qcom,mdss-night-brightness = <7 25 43 61>;
+		qcom,ulps-enabled;
+ 		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 		qcom,mdss-dsi-display-timings {
 			timing@0{
 				qcom,mdss-dsi-panel-width = <1080>;

@@ -31,7 +31,7 @@
 		qcom,mdss-dsi-traffic-mode = "burst_mode";
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
-		qcom,mdss-dsi-lp11-init;
+ 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -65,6 +65,10 @@
 		/* qcom,esd-err-irq-gpio = <&tlmm 52 0x2004>; */
 
 		/* qcom,bl-update-flag = "delay_until_first_frame"; */
+
+		qcom,ulps-enabled;
+ 		qcom,suspend-ulps-enabled;
+		qcom,panel-allow-phy-poweroff;
 
 		qcom,mdss-dsi-display-timings {
 			timing@0{
