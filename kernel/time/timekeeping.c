@@ -1675,6 +1675,9 @@ void timekeeping_inject_sleeptime64(struct timespec64 *delta)
 
 	/* signal hrtimers about time change */
 	clock_was_set();
+
+	/* Offset printk time */
+	set_printk_offset(ktime_to_ns(tk->offs_boot));
 }
 #endif
 
