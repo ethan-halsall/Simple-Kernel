@@ -499,4 +499,6 @@ static inline void print_hex_dump_debug(const char *prefix_str, int prefix_type,
 }
 #endif
 
+extern void set_printk_offset(s64 offset);
+
 #endif

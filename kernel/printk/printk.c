@@ -1180,6 +1180,13 @@ static inline void boot_delay_msec(int level)
 static bool printk_time = IS_ENABLED(CONFIG_PRINTK_TIME);
 module_param_named(time, printk_time, bool, S_IRUGO | S_IWUSR);
 
+static s64 printk_offset __read_mostly;
+
+void set_printk_offset(s64 offset)
+{
+	printk_offset = offset;
+}
+
 static size_t print_time(u64 ts, char *buf)
 {
 	unsigned long rem_nsec;
@@ -1187,6 +1194,7 @@ static size_t print_time(u64 ts, char *buf)
 	if (!printk_time)
 		return 0;
 
+	ts += printk_offset;
 	rem_nsec = do_div(ts, 1000000000);
 
 	if (!buf)
