@@ -27,7 +27,9 @@
 #include "exposure_adjustment.h"
 
 static struct drm_msm_pcc pcc_blk = {0};
+#ifndef EA_MODE_ALWAYS_ON
 static bool pcc_backlight_enable = false;
+#endif
 static u32 last_level = ELVSS_OFF_THRESHOLD;
 
 static int ea_panel_crtc_send_pcc(struct dsi_display *display,
@@ -102,7 +104,6 @@ static int ea_panel_send_pcc(u32 bl_lvl)
 	else
 		ea_coeff = EXPOSURE_ADJUSTMENT_MAX;
 
-	pr_info("ea_coeff = %X\n", ea_coeff);
 	r_data = ea_coeff;
 	g_data = ea_coeff;
 	b_data = ea_coeff;
@@ -110,6 +111,7 @@ static int ea_panel_send_pcc(u32 bl_lvl)
 	return ea_panel_crtc_send_pcc(display, r_data, g_data, b_data);
 }
 
+#ifndef EA_MODE_ALWAYS_ON
 void ea_panel_mode_ctrl(struct dsi_panel *panel, bool enable)
 {
 	if (pcc_backlight_enable != enable) {
@@ -123,17 +125,28 @@ void ea_panel_mode_ctrl(struct dsi_panel *panel, bool enable)
 		ea_panel_send_pcc(ELVSS_OFF_THRESHOLD);
 	}
 }
+#endif
 
 u32 ea_panel_calc_backlight(u32 bl_lvl)
 {
-	last_level = bl_lvl;
+	u32 override_level;
 
-	if (pcc_backlight_enable && bl_lvl != 0 && bl_lvl < ELVSS_OFF_THRESHOLD) {
+	if (bl_lvl != 0 &&
+#ifndef EA_MODE_ALWAYS_ON
+		pcc_backlight_enable &&
+#endif
+		bl_lvl < ELVSS_OFF_THRESHOLD) {
 		if (ea_panel_send_pcc(bl_lvl))
 			pr_err("ERROR: Failed to send PCC\n");
 
-		return ELVSS_OFF_THRESHOLD;
+		override_level = ELVSS_OFF_THRESHOLD;
 	} else {
-		return bl_lvl;
+		if(last_level < ELVSS_OFF_THRESHOLD)
+			ea_panel_send_pcc(ELVSS_OFF_THRESHOLD);
+
+		override_level = bl_lvl;
 	}
+	last_level = bl_lvl;
+
+	return override_level;
 }
