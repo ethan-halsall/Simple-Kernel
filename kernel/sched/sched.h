@@ -2463,7 +2463,7 @@ extern void sched_get_nr_running_avg(struct sched_avg_stats *stats);
 
 #define find_first_cpu_bit(...) -1
 
-#if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
+#ifdef CONFIG_ENERGY_MODEL
 #define perf_domain_span(pd) (to_cpumask(((pd)->em_pd->cpus)))
 
 
