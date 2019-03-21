@@ -710,6 +710,7 @@ static unsigned int osm_cpufreq_get(unsigned int cpu)
 {
 	struct cpufreq_policy *policy = cpufreq_cpu_get_raw(cpu);
 	struct clk_osm *c;
+	u32 curr_lval;
 	u32 index;
 
 	if (!policy)
@@ -718,7 +719,12 @@ static unsigned int osm_cpufreq_get(unsigned int cpu)
 	c = policy->driver_data;
 	index = clk_osm_read_reg(c,
 			DCVS_PERF_STATE_DESIRED_REG(c->core_num, is_sdm845v1));
-	return policy->freq_table[index].frequency;
+
+	if (policy->freq_table[index].frequency == OSM_INIT_RATE / 1000)
+		return OSM_INIT_RATE / 1000;
+
+	curr_lval = CURRENT_LVAL(clk_osm_read_reg(c, PSTATE_STATUS));
+	return XO_RATE * curr_lval / 1000;
 }
 
 static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
