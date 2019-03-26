@@ -274,6 +274,51 @@ void cpufreq_cpu_put(struct cpufreq_policy *policy)
 }
 EXPORT_SYMBOL_GPL(cpufreq_cpu_put);
 
+/**
+ * cpufreq_cpu_release - Unlock a policy and decrement its usage counter.
+ * @policy: cpufreq policy returned by cpufreq_cpu_acquire().
+ */
+static void cpufreq_cpu_release(struct cpufreq_policy *policy)
+{
+	if (WARN_ON(!policy))
+		return;
+
+	lockdep_assert_held(&policy->rwsem);
+
+	up_write(&policy->rwsem);
+
+	cpufreq_cpu_put(policy);
+}
+
+/**
+ * cpufreq_cpu_acquire - Find policy for a CPU, mark it as busy and lock it.
+ * @cpu: CPU to find the policy for.
+ *
+ * Call cpufreq_cpu_get() to get a reference on the cpufreq policy for @cpu and
+ * if the policy returned by it is not NULL, acquire its rwsem for writing.
+ * Return the policy if it is active or release it and return NULL otherwise.
+ *
+ * The policy returned by this function has to be released with the help of
+ * cpufreq_cpu_release() in order to release its rwsem and balance its usage
+ * counter properly.
+ */
+static struct cpufreq_policy *cpufreq_cpu_acquire(unsigned int cpu)
+{
+	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+
+	if (!policy)
+		return NULL;
+
+	down_write(&policy->rwsem);
+
+	if (policy_is_inactive(policy)) {
+		cpufreq_cpu_release(policy);
+		return NULL;
+	}
+
+	return policy;
+}
+
 /*********************************************************************
  *            EXTERNALLY AFFECTING FREQUENCY CHANGES                 *
  *********************************************************************/
@@ -2449,21 +2494,13 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
  *	Useful for policy notifiers which have different necessities
  *	at different times.
  */
-int cpufreq_update_policy(unsigned int cpu)
+void cpufreq_update_policy(unsigned int cpu)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+	struct cpufreq_policy *policy = cpufreq_cpu_acquire(cpu);
 	struct cpufreq_policy new_policy;
-	int ret;
 
 	if (!policy)
-		return -ENODEV;
-
-	down_write(&policy->rwsem);
-
-	if (policy_is_inactive(policy)) {
-		ret = -ENODEV;
-		goto unlock;
-	}
+		return;
 
 	/*
 	 * BIOS might change freq behind our back
@@ -2478,13 +2515,10 @@ int cpufreq_update_policy(unsigned int cpu)
 	new_policy.min = policy->user_policy.min;
 	new_policy.max = policy->user_policy.max;
 
-	ret = cpufreq_set_policy(policy, &new_policy);
+	cpufreq_set_policy(policy, &new_policy);
 
 unlock:
-	up_write(&policy->rwsem);
-
-	cpufreq_cpu_put(policy);
-	return ret;
+	cpufreq_cpu_release(policy);
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
 
