@@ -97,6 +97,7 @@ struct clk_osm {
 	u32 prev_cycle_counter;
 	u32 max_core_count;
 	u32 mx_turbo_freq;
+	ktime_t last_update;
 };
 
 static bool is_sdm845v1;
@@ -209,7 +210,8 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_osm *c = to_clk_osm(hw);
 	struct clk_hw *p_hw = clk_hw_get_parent(hw);
 	struct clk_osm *parent = to_clk_osm(p_hw);
-	int core_num, index = 0;
+	int core_num, current_index, index;
+	s64 delta_us;
 
 	if (!c || !parent)
 		return -EINVAL;
@@ -222,6 +224,20 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	core_num = parent->per_core_dcvs ? c->core_num : 0;
+
+	/* Skip the update if the current rate is the same as the new one */
+	current_index = clk_osm_read_reg(parent,
+				DCVS_PERF_STATE_DESIRED_REG(core_num,
+							is_sdm845v1));
+	if (current_index == index)
+		return 0;
+
+	/* The old rate needs time to settle before it can be changed again */
+	delta_us = ktime_us_delta(ktime_get_boottime(), parent->last_update);
+	if (delta_us < 10000)
+		usleep_range(10000 - delta_us, 11000 - delta_us);
+	parent->last_update = ktime_get_boottime();
+
 	clk_osm_write_reg(parent, index,
 				DCVS_PERF_STATE_DESIRED_REG(core_num,
 							is_sdm845v1));
@@ -230,38 +246,6 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 	clk_osm_mb(parent);
 
 	return 0;
-}
-
-static int clk_pwrcl_set_rate(struct clk_hw *hw, unsigned long rate,
-						unsigned long parent_rate)
-{
-	struct clk_hw *p_hw = clk_hw_get_parent(hw);
-	struct clk_osm *parent = to_clk_osm(p_hw);
-	int ret, index = 0, count = 40;
-	u32 curr_lval;
-
-	ret = clk_cpu_set_rate(hw, rate, parent_rate);
-	if (ret)
-		return ret;
-
-	index = clk_osm_search_table(parent->osm_table,
-					parent->num_entries, rate);
-	if (index < 0)
-		return -EINVAL;
-
-	/*
-	 * Poll the CURRENT_FREQUENCY value of the PSTATE_STATUS register to
-	 * check if the L_VAL has been updated.
-	 */
-	while (count-- > 0) {
-		curr_lval = CURRENT_LVAL(clk_osm_read_reg(parent,
-								PSTATE_STATUS));
-		if (curr_lval <= parent->osm_table[index].lval)
-			return 0;
-		udelay(50);
-	}
-	pr_err("cannot set %s to %lu\n", clk_hw_get_name(hw), rate);
-	return -ETIMEDOUT;
 }
 
 static unsigned long clk_cpu_recalc_rate(struct clk_hw *hw,
@@ -378,7 +362,7 @@ static const struct clk_ops clk_ops_l3_osm = {
 };
 
 static const struct clk_ops clk_ops_pwrcl_core = {
-	.set_rate = clk_pwrcl_set_rate,
+	.set_rate = clk_cpu_set_rate,
 	.round_rate = clk_cpu_round_rate,
 	.recalc_rate = clk_cpu_recalc_rate,
 	.debug_init = clk_debug_measure_add,
