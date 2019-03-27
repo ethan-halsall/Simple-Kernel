@@ -98,6 +98,7 @@ struct clk_osm {
 	u32 max_core_count;
 	u32 mx_turbo_freq;
 	ktime_t last_update;
+	struct mutex update_lock;
 };
 
 static bool is_sdm845v1;
@@ -210,8 +211,7 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_osm *c = to_clk_osm(hw);
 	struct clk_hw *p_hw = clk_hw_get_parent(hw);
 	struct clk_osm *parent = to_clk_osm(p_hw);
-	int core_num, current_index, index;
-	s64 delta_us;
+	int core_num, index;
 
 	if (!c || !parent)
 		return -EINVAL;
@@ -224,20 +224,6 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 	}
 
 	core_num = parent->per_core_dcvs ? c->core_num : 0;
-
-	/* Skip the update if the current rate is the same as the new one */
-	current_index = clk_osm_read_reg(parent,
-				DCVS_PERF_STATE_DESIRED_REG(core_num,
-							is_sdm845v1));
-	if (current_index == index)
-		return 0;
-
-	/* The old rate needs time to settle before it can be changed again */
-	delta_us = ktime_us_delta(ktime_get_boottime(), parent->last_update);
-	if (delta_us < 10000)
-		usleep_range(10000 - delta_us, 11000 - delta_us);
-	parent->last_update = ktime_get_boottime();
-
 	clk_osm_write_reg(parent, index,
 				DCVS_PERF_STATE_DESIRED_REG(core_num,
 							is_sdm845v1));
@@ -675,7 +661,10 @@ osm_set_index(struct clk_osm *c, unsigned int index)
 {
 	struct clk_hw *p_hw = clk_hw_get_parent(&c->hw);
 	struct clk_osm *parent = to_clk_osm(p_hw);
-	unsigned long rate = 0;
+	unsigned int current_index;
+	unsigned long rate;
+	int core_num;
+	s64 delta_us;
 
 	if (index >= OSM_TABLE_SIZE) {
 		pr_err("Passing an index (%u) that's greater than max (%d)\n",
@@ -687,7 +676,25 @@ osm_set_index(struct clk_osm *c, unsigned int index)
 	if (!rate)
 		return;
 
+	core_num = parent->per_core_dcvs ? c->core_num : 0;
+
+	/* Skip the update if the current rate is the same as the new one */
+	mutex_lock(&parent->update_lock);
+	current_index = clk_osm_read_reg(parent,
+				DCVS_PERF_STATE_DESIRED_REG(core_num,
+							is_sdm845v1));
+	if (current_index == index)
+		goto unlock;
+
+	/* The old rate needs time to settle before it can be changed again */
+	delta_us = ktime_us_delta(ktime_get_boottime(), parent->last_update);
+	if (delta_us < 10000)
+		usleep_range(10000 - delta_us, 11000 - delta_us);
+	parent->last_update = ktime_get_boottime();
+
 	clk_set_rate(c->hw.clk, clk_round_rate(c->hw.clk, rate));
+unlock:
+	mutex_unlock(&parent->update_lock);
 }
 
 static int
@@ -1301,6 +1308,9 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 	spin_lock_init(&l3_clk.lock);
 	spin_lock_init(&pwrcl_clk.lock);
 	spin_lock_init(&perfcl_clk.lock);
+	mutex_init(&l3_clk.update_lock);
+	mutex_init(&pwrcl_clk.update_lock);
+	mutex_init(&perfcl_clk.update_lock);
 
 	/* Register OSM l3, pwr and perf clocks with Clock Framework */
 	for (i = 0; i < num_clks; i++) {
