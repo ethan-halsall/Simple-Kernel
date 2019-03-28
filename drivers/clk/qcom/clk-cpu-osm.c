@@ -43,6 +43,7 @@
 
 #define OSM_INIT_RATE			300000000UL
 #define XO_RATE				19200000UL
+#define RATE_LIMIT_US			10000
 #define OSM_TABLE_SIZE			40
 #define SINGLE_CORE			1
 #define MAX_CLUSTER_CNT			3
@@ -688,8 +689,9 @@ osm_set_index(struct clk_osm *c, unsigned int index)
 
 	/* The old rate needs time to settle before it can be changed again */
 	delta_us = ktime_us_delta(ktime_get_boottime(), parent->last_update);
-	if (delta_us < 10000)
-		usleep_range(10000 - delta_us, 11000 - delta_us);
+	if (delta_us < RATE_LIMIT_US)
+		usleep_range(RATE_LIMIT_US - delta_us,
+			     (RATE_LIMIT_US + 1000) - delta_us);
 	parent->last_update = ktime_get_boottime();
 
 	clk_set_rate(c->hw.clk, clk_round_rate(c->hw.clk, rate));
@@ -805,6 +807,7 @@ static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 		goto err;
 	}
 
+	policy->cpuinfo.transition_latency = RATE_LIMIT_US;
 	policy->driver_data = c;
 	return 0;
 
