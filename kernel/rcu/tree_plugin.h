@@ -1853,20 +1853,9 @@ static void nocb_gp_wait(struct rcu_data *my_rdp)
 		rdp->nocb_cb_tail = rdp->nocb_gp_tail;
 		*tail = rdp->nocb_gp_head;
 		raw_spin_unlock_irqrestore(&rdp->nocb_lock, flags);
-<<<<<<< HEAD
-		if (rdp != my_rdp && tail == &rdp->nocb_cb_head) {
-<<<<<<< HEAD
-			/* List was empty, so wake up the follower.  */
-			swake_up(&rdp->nocb_wq);
-=======
-			/* List was empty, so wake up the kthread.  */
-			swake_up_one(&rdp->nocb_wq);
->>>>>>> 6484fe54b5c6... rcu/nocb: Update comments to prepare for forward-progress work
-=======
 		if (tail == &rdp->nocb_cb_head) {
 			/* List was empty, so wake up the kthread.  */
-			swake_up_one(&rdp->nocb_cb_wq);
->>>>>>> 12f54c3a8410... rcu/nocb: Provide separate no-CBs grace-period kthreads
+			swake_up(&rdp->nocb_cb_wq);
 		}
 	}
 }
@@ -1895,31 +1884,12 @@ static int rcu_nocb_gp_kthread(void *arg)
  */
 static bool nocb_cb_wait(struct rcu_data *rdp)
 {
-<<<<<<< HEAD
-	for (;;) {
-		trace_rcu_nocb_wake(rcu_state.name, rdp->cpu, TPS("FollowerSleep"));
-<<<<<<< HEAD
-		swait_event_interruptible(rdp->nocb_wq,
-					 READ_ONCE(rdp->nocb_follower_head));
-		if (smp_load_acquire(&rdp->nocb_follower_head)) {
-=======
-		swait_event_interruptible_exclusive(rdp->nocb_wq,
-					 READ_ONCE(rdp->nocb_cb_head));
-		if (smp_load_acquire(&rdp->nocb_cb_head)) {
->>>>>>> 58bf6f77c6fb... rcu/nocb: Rename rcu_data fields to prepare for forward-progress work
-			/* ^^^ Ensure CB invocation follows _head test. */
-			return;
-		}
-		WARN_ON(signal_pending(current));
-		trace_rcu_nocb_wake(rcu_state.name, rdp->cpu, TPS("WokeEmpty"));
-=======
-	trace_rcu_nocb_wake(rcu_state.name, rdp->cpu, TPS("FollowerSleep"));
-	swait_event_interruptible_exclusive(rdp->nocb_cb_wq,
+	trace_rcu_nocb_wake(rcu_state.name, rdp->cpu, TPS("CBSleep"));
+	swait_event_interruptible(rdp->nocb_cb_wq,
 				 READ_ONCE(rdp->nocb_cb_head));
 	if (smp_load_acquire(&rdp->nocb_cb_head)) { /* VVV */
 		/* ^^^ Ensure CB invocation follows _head test. */
 		return false;
->>>>>>> 12f54c3a8410... rcu/nocb: Provide separate no-CBs grace-period kthreads
 	}
 	WARN_ON(signal_pending(current));
 	trace_rcu_nocb_wake(rcu_state.name, rdp->cpu, TPS("WokeEmpty"));
