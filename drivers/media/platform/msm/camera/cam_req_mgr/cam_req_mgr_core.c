@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2018,2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2073,6 +2073,8 @@ static int cam_req_mgr_cb_notify_trigger(
 	struct cam_req_mgr_core_link    *link = NULL;
 	struct cam_req_mgr_trigger_notify   *notify_trigger;
 	struct crm_task_payload         *task_data;
+	bool   send_sof = true;
+	int    i = 0;
 
 	if (!trigger_data) {
 		CAM_ERR(CAM_CRM, "sof_data is NULL");
@@ -2087,6 +2089,24 @@ static int cam_req_mgr_cb_notify_trigger(
 		rc = -EINVAL;
 		goto end;
 	}
+	for (i = 0; i < link->num_sof_src; i++) {
+		if (link->dev_sof_evt[i].dev_hdl == trigger_data->dev_hdl) {
+			if (link->dev_sof_evt[i].sof_done == false)
+				link->dev_sof_evt[i].sof_done = true;
+			else
+				CAM_DBG(CAM_CRM, "Received Surious SOF");
+
+		} else if (link->dev_sof_evt[i].sof_done == false) {
+			send_sof = false;
+		}
+
+	}
+
+	if (!send_sof)
+		return 0;
+
+	for (i = 0; i < link->num_sof_src; i++)
+		link->dev_sof_evt[i].sof_done = false;
 
 	spin_lock_bh(&link->link_state_spin_lock);
 	if (link->state < CAM_CRM_LINK_STATE_READY) {
@@ -2198,6 +2218,12 @@ static int __cam_req_mgr_setup_link_info(struct cam_req_mgr_core_link *link,
 				max_delay = dev->dev_info.p_delay;
 
 			subscribe_event |= (uint32_t)dev->dev_info.trigger;
+		}
+		if (dev->dev_info.dev_id == CAM_REQ_MGR_DEVICE_IFE) {
+			link->dev_sof_evt[link->num_sof_src].dev_hdl =
+				dev->dev_hdl;
+			link->dev_sof_evt[link->num_sof_src].sof_done = false;
+			link->num_sof_src++;
 		}
 	}
 
