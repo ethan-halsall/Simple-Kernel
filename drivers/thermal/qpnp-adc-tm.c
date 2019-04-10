@@ -1888,15 +1888,38 @@ static void notify_clients(struct qpnp_adc_tm_sensor *adc_tm)
 	}
 }
 
+static int qpnp_adc_read_temp(void *data, int *temp)
+{
+	struct qpnp_adc_tm_sensor *adc_tm_sensor = data;
+	struct qpnp_adc_tm_chip *chip = adc_tm_sensor->chip;
+	struct qpnp_vadc_result result;
+	int rc = 0;
+
+	rc = qpnp_vadc_read(chip->vadc_dev,
+				adc_tm_sensor->vadc_channel_num, &result);
+	if (rc)
+		return rc;
+
+	*temp = result.physical;
+
+	return rc;
+}
+
 static void notify_adc_tm_fn(struct work_struct *work)
 {
 	struct qpnp_adc_tm_sensor *adc_tm = container_of(work,
 		struct qpnp_adc_tm_sensor, work);
 	struct qpnp_adc_tm_chip *chip = adc_tm->chip;
+	int temp;
+	int ret;
 
 	if (adc_tm->thermal_node) {
 		pr_debug("notifying uspace client\n");
-		of_thermal_handle_trip(adc_tm->tz_dev);
+		ret = qpnp_adc_read_temp(adc_tm, &temp);
+		if (ret)
+			of_thermal_handle_trip(adc_tm->tz_dev);
+		else
+			of_thermal_handle_trip_temp(adc_tm->tz_dev, temp);
 	} else {
 		if (adc_tm->scale_type == SCALE_RBATT_THERM)
 			notify_battery_therm(adc_tm);
@@ -2810,23 +2833,6 @@ static irqreturn_t qpnp_adc_tm_rc_thr_isr(int irq, void *data)
 	clear_tmp_low_high(chip);
 
 	return IRQ_HANDLED;
-}
-
-static int qpnp_adc_read_temp(void *data, int *temp)
-{
-	struct qpnp_adc_tm_sensor *adc_tm_sensor = data;
-	struct qpnp_adc_tm_chip *chip = adc_tm_sensor->chip;
-	struct qpnp_vadc_result result;
-	int rc = 0;
-
-	rc = qpnp_vadc_read(chip->vadc_dev,
-				adc_tm_sensor->vadc_channel_num, &result);
-	if (rc)
-		return rc;
-
-	*temp = result.physical;
-
-	return rc;
 }
 
 static struct thermal_zone_of_device_ops qpnp_adc_tm_thermal_ops = {
