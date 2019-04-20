@@ -20,6 +20,7 @@
 #include <linux/net.h>
 #include <linux/vmalloc.h>
 #include <linux/zstd.h>
+#include <crypto/internal/scompress.h>
 
 
 #define ZSTD_DEF_LEVEL	3
@@ -110,6 +111,24 @@ static int __zstd_init(void *ctx)
 	return ret;
 }
 
+static void *zstd_alloc_ctx(struct crypto_scomp *tfm)
+{
+	int ret;
+	struct zstd_ctx *ctx;
+
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return ERR_PTR(-ENOMEM);
+
+	ret = __zstd_init(ctx);
+	if (ret) {
+		kfree(ctx);
+		return ERR_PTR(ret);
+	}
+
+	return ctx;
+}
+
 static int zstd_init(struct crypto_tfm *tfm)
 {
 	struct zstd_ctx *ctx = crypto_tfm_ctx(tfm);
@@ -121,6 +140,12 @@ static void __zstd_exit(void *ctx)
 {
 	zstd_comp_exit(ctx);
 	zstd_decomp_exit(ctx);
+}
+
+static void zstd_free_ctx(struct crypto_scomp *tfm, void *ctx)
+{
+	__zstd_exit(ctx);
+	kzfree(ctx);
 }
 
 static void zstd_exit(struct crypto_tfm *tfm)
@@ -152,6 +177,13 @@ static int zstd_compress(struct crypto_tfm *tfm, const u8 *src,
 	return __zstd_compress(src, slen, dst, dlen, ctx);
 }
 
+static int zstd_scompress(struct crypto_scomp *tfm, const u8 *src,
+			  unsigned int slen, u8 *dst, unsigned int *dlen,
+			  void *ctx)
+{
+	return __zstd_compress(src, slen, dst, dlen, ctx);
+}
+
 static int __zstd_decompress(const u8 *src, unsigned int slen,
 			     u8 *dst, unsigned int *dlen, void *ctx)
 {
@@ -173,6 +205,13 @@ static int zstd_decompress(struct crypto_tfm *tfm, const u8 *src,
 	return __zstd_decompress(src, slen, dst, dlen, ctx);
 }
 
+static int zstd_sdecompress(struct crypto_scomp *tfm, const u8 *src,
+			    unsigned int slen, u8 *dst, unsigned int *dlen,
+			    void *ctx)
+{
+	return __zstd_decompress(src, slen, dst, dlen, ctx);
+}
+
 static struct crypto_alg alg = {
 	.cra_name		= "zstd",
 	.cra_flags		= CRYPTO_ALG_TYPE_COMPRESS,
@@ -185,6 +224,18 @@ static struct crypto_alg alg = {
 	.coa_decompress		= zstd_decompress } }
 };
 
+static struct scomp_alg scomp = {
+	.alloc_ctx		= zstd_alloc_ctx,
+	.free_ctx		= zstd_free_ctx,
+	.compress		= zstd_scompress,
+	.decompress		= zstd_sdecompress,
+	.base			= {
+		.cra_name	= "zstd",
+		.cra_driver_name = "zstd-scomp",
+		.cra_module	 = THIS_MODULE,
+	}
+};
+
 static int __init zstd_mod_init(void)
 {
 	int ret;
@@ -193,12 +244,17 @@ static int __init zstd_mod_init(void)
 	if (ret)
 		return ret;
 
+	ret = crypto_register_scomp(&scomp);
+	if (ret)
+		crypto_unregister_alg(&alg);
+
 	return ret;
 }
 
 static void __exit zstd_mod_fini(void)
 {
 	crypto_unregister_alg(&alg);
+	crypto_unregister_scomp(&scomp);
 }
 
 module_init(zstd_mod_init);
