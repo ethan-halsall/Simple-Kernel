@@ -193,6 +193,9 @@ static unsigned long limits_mitigation_notify(struct limits_dcvs_hw *hw)
 
 notify_exit:
 	hw->hw_freq_limit = max_limit;
+	get_online_cpus();
+	cpufreq_update_policy(cpumask_first(&hw->core_map));
+	put_online_cpus();
 	return max_limit;
 }
 
