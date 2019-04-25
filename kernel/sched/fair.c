@@ -10257,17 +10257,15 @@ static int need_active_balance(struct lb_env *env)
 	}
 
 	/*
-	 * The dst_cpu is idle and the src_cpu CPU has only 1 CFS task.
-	 * It's worth migrating the task if the src_cpu's capacity is reduced
-	 * because of other sched_class or IRQs if more capacity stays
-	 * available on dst_cpu.
+	 * src_cpu has only 1 CFS task. If its capacity is significantly
+	 * reduced (RT/IRQ pressure), it's worth moving that task if dst_cpu
+	 * can provide more capacity.
 	 */
-	if ((env->idle != CPU_NOT_IDLE) &&
-	    (env->src_rq->cfs.h_nr_running == 1)) {
-		if ((check_cpu_capacity(env->src_rq, sd)) &&
-		    (capacity_of(env->src_cpu)*sd->imbalance_pct < capacity_of(env->dst_cpu)*100))
-			return 1;
-	}
+	if (env->src_rq->cfs.h_nr_running == 1 &&
+	    check_cpu_capacity(env->src_rq, sd) &&
+	    (capacity_of(env->dst_cpu) - cpu_util(env->dst_cpu)) * 100 >
+	    capacity_of(env->src_cpu) * sd->imbalance_pct)
+		return 1;
 
 	if ((env->idle != CPU_NOT_IDLE) &&
 	    (capacity_orig_of(env->src_cpu) < capacity_orig_of(env->dst_cpu)) &&
