@@ -2878,10 +2878,9 @@ int __do_munmap(struct mm_struct *mm, unsigned long start, size_t len, bool down
 	return downgrade ? 1 : 0;
 }
 
-int do_munmap(struct mm_struct *mm, unsigned long start, size_t len,
-	      struct list_head *uf)
+int do_munmap(struct mm_struct *mm, unsigned long start, size_t len)
 {
-	return __do_munmap(mm, start, len, uf, false);
+	return __do_munmap(mm, start, len, false);
 }
 
 static int __vm_munmap(unsigned long start, size_t len, bool downgrade)
@@ -2892,7 +2891,7 @@ static int __vm_munmap(unsigned long start, size_t len, bool downgrade)
 	if (down_write_killable(&mm->mmap_sem))
 		return -EINTR;
 
-	ret = __do_munmap(mm, start, len, &uf, downgrade);
+	ret = __do_munmap(mm, start, len, downgrade);
 	/*
 	 * Returning 1 indicates mmap_sem is downgraded.
 	 * But 1 is not legal return value of vm_munmap() and munmap(), reset

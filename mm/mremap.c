@@ -547,7 +547,7 @@ SYSCALL_DEFINE5(mremap, unsigned long, addr, unsigned long, old_len,
 	if (old_len >= new_len) {
 		int retval;
 
-		retval = __do_munmap(mm, addr+new_len, old_len - new_len);
+		retval = __do_munmap(mm, addr+new_len, old_len - new_len, true);
 		if (retval < 0 && old_len != new_len) {
 			ret = retval;
 			goto out;
