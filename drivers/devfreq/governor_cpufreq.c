@@ -217,7 +217,7 @@ static int cpufreq_trans_notifier(struct notifier_block *nb,
 
 	mutex_lock(&state_lock);
 
-	s = state[freq->cpu];
+	s = state[freq->policy->cpu];
 	if (!s)
 		goto out;
 

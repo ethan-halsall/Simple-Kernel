@@ -119,7 +119,7 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 			unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freqs = data;
-	struct cpu_load_data *this_cpu = &per_cpu(cpuload, freqs->cpu);
+	struct cpu_load_data *this_cpu = &per_cpu(cpuload, freqs->policy->cpu);
 	int j;
 
 	switch (val) {
