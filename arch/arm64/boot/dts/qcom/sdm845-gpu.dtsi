@@ -81,7 +81,7 @@
 
 		tzone-names = "gpu0-usr", "gpu1-usr";
 
-		qcom,pm-qos-active-latency = <460>;
+		qcom,pm-qos-active-latency = <44>;
 
 		clocks = <&clock_gfx GPU_CC_GX_GFX3D_CLK>,
 			<&clock_gpucc GPU_CC_CXO_CLK>,
