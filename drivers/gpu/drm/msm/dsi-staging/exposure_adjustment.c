@@ -19,6 +19,7 @@
 
 #include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/moduleparam.h>
 #include <linux/notifier.h>
 #include "dsi_display.h"
 #include "dsi_panel.h"
@@ -31,6 +32,14 @@ static struct drm_msm_pcc pcc_blk = {0};
 static bool pcc_backlight_enable = false;
 #endif
 static u32 last_level = ELVSS_OFF_THRESHOLD;
+
+static __read_mostly unsigned int flickerfree_enabled = 0;
+
+module_param(flickerfree_enabled, uint, 0644);
+
+unsigned int ea_panel_on(void) {
+	return flickerfree_enabled;
+}
 
 static int ea_panel_crtc_send_pcc(struct dsi_display *display,
 			       u32 r_data, u32 g_data, u32 b_data)
