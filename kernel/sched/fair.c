@@ -3354,6 +3354,18 @@ static inline void cfs_rq_util_change(struct cfs_rq *cfs_rq)
 	}
 }
 
+static inline int per_task_boost(struct task_struct *p)
+{
+	if (p->boost_period) {
+	    if (sched_clock() > p->boost_expires) {
+		p->boost_period = 0;
+		p->boost_expires = 0;
+		p->boost = 0;
+	    }
+	}
+	return p->boost;
+}
+
 /*
  * Unsigned subtract and clamp on underflow.
  *
@@ -6451,13 +6463,20 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 {
 	unsigned long capacity = capacity_orig_of(cpu);
 	unsigned long max_capacity = cpu_rq(cpu)->rd->max_cpu_capacity.val;
+	unsigned long task_boost = per_task_boost(p);
 
 	if (capacity == max_capacity)
 		return true;
 
-	if (task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
-		schedtune_task_boost(p) > 0)
-		return false;
+	if (is_min_capacity_cpu(cpu)) {
+		if (task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
+			task_boost > 0 ||
+			schedtune_task_boost(p) > 0)
+			return false;
+	} else { /* mid cap cpu */
+		if (task_boost > 1)
+			return false;
+	}
 
 	return __task_fits(p, cpu, 0);
 }
@@ -7829,7 +7848,7 @@ static int select_energy_cpu_brute(struct task_struct *p, int prev_cpu,
 	schedstat_inc(this_rq()->eas_stats.secb_attempts);
 
 	rcu_read_lock();
-	boosted = task_is_boosted(p);
+	boosted = task_is_boosted(p) || per_task_boost(p) > 0;
 #ifdef CONFIG_CGROUP_SCHEDTUNE
 	prefer_idle = schedtune_prefer_idle(p) > 0;
 #else
