@@ -8475,6 +8475,14 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 		return 0;
 #endif
 
+	/* Dont allow boosted tasks to be pulled to small cores unless
+	 * big cores are overutilized
+	 */
+	if (!env->src_rq->rd->overutilized &&
+		env->flags & LBF_IGNORE_BIG_TASKS &&
+		(schedtune_task_boost(p) > 0))
+		return 0;
+
 	if (task_running(env->src_rq, p)) {
 		schedstat_inc(p->se.statistics.nr_failed_migrations_running);
 		return 0;
