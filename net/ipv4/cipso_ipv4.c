@@ -1102,8 +1102,8 @@ static int cipso_v4_map_cat_rng_hton(const struct cipso_v4_doi *doi_def,
 		array[array_cnt++] = iter;
 	}
 
-	for (iter = 0; array_cnt > 0;) {
-		*((__be16 *)&net_cat[iter]) = htons(array[--array_cnt]);
+	for (iter = 0; --array_cnt > 0;) {
+		*((__be16 *)&net_cat[iter]) = htons(array[array_cnt]);
 		iter += 2;
 		array_cnt--;
 		if (array[array_cnt] != 0) {

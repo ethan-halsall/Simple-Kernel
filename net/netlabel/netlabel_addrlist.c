@@ -369,8 +369,9 @@ void netlbl_af6list_audit_addr(struct audit_buffer *audit_buf,
 		u32 mask_len = 0;
 		u32 mask_val;
 		int iter = -1;
-		while (ntohl(mask->s6_addr32[++iter]) == 0xffffffff)
+		while (ntohl(mask->s6_addr32[iter]) == 0xffffffff)
 			mask_len += 32;
+			++iter;
 		mask_val = ntohl(mask->s6_addr32[iter]);
 		while (mask_val > 0) {
 			mask_val <<= 1;
