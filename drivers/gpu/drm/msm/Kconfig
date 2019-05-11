@@ -36,6 +36,15 @@ config DRM_MSM_HDMI_HDCP
 	  that can be parsed by envytools demsm tool.  If enabled, register
 	  logging can be switched on via msm.reglog=y module param.
 
+config DRM_MSM_DP
+	bool "Enable DisplayPort support in MSM DRM driver"
+	depends on DRM_MSM
+	depends on COMMON_CLK
+	default n
+	help
+	  Compile in support for displays connected via the DisplayPort
+	  interface.
+
 config DRM_MSM_HDMI
 	bool "Enable HDMI support in MSM DRM driver"
 	depends on DRM_MSM

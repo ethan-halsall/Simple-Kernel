@@ -279,8 +279,10 @@ struct sde_kms {
 	void **dsi_displays;
 	int wb_display_count;
 	void **wb_displays;
+#ifdef CONFIG_DRM_MSM_DP
 	int dp_display_count;
 	void **dp_displays;
+#endif
 
 	bool has_danger_ctrl;
 
