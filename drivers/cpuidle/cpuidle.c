@@ -35,6 +35,9 @@ static int enabled_devices;
 static int off __read_mostly;
 static int initialized __read_mostly;
 
+static void cpuidle_set_idle_cpu(unsigned int cpu);
+static void cpuidle_clear_idle_cpu(unsigned int cpu);
+
 int cpuidle_disabled(void)
 {
 	return off;
@@ -153,7 +156,7 @@ int cpuidle_enter_freeze(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 	 * be frozen safely.
 	 */
 	index = find_deepest_state(drv, dev, UINT_MAX, 0, true);
-	if (index > 0)
+	if (index >= 0)
 		enter_freeze_proper(drv, dev, index);
 
 	return index;
@@ -199,7 +202,9 @@ int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
 	time_start = ns_to_ktime(local_clock());
 
 	stop_critical_timings();
+	cpuidle_set_idle_cpu(dev->cpu);
 	entered_state = target_state->enter(dev, drv, index);
+	cpuidle_clear_idle_cpu(dev->cpu);
 	start_critical_timings();
 
 	time_end = ns_to_ktime(local_clock());
@@ -613,25 +618,20 @@ int cpuidle_register(struct cpuidle_driver *drv,
 EXPORT_SYMBOL_GPL(cpuidle_register);
 
 #ifdef CONFIG_SMP
+static atomic_t idle_cpu_mask = ATOMIC_INIT(0);
 
-static void wake_up_idle_cpus(void *v)
+#if NR_CPUS > 32
+#error idle_cpu_mask not big enough for NR_CPUS
+#endif
+
+static void cpuidle_set_idle_cpu(unsigned int cpu)
 {
-	int cpu;
-	struct cpumask cpus;
+	atomic_or(BIT(cpu), &idle_cpu_mask);
+}
 
-	preempt_disable();
-	if (v) {
-		cpumask_andnot(&cpus, v, cpu_isolated_mask);
-		cpumask_and(&cpus, &cpus, cpu_online_mask);
-	} else
-		cpumask_andnot(&cpus, cpu_online_mask, cpu_isolated_mask);
-
-	for_each_cpu(cpu, &cpus) {
-		if (cpu == smp_processor_id())
-			continue;
-		wake_up_if_idle(cpu);
-	}
-	preempt_enable();
+static void cpuidle_clear_idle_cpu(unsigned int cpu)
+{
+	atomic_andnot(BIT(cpu), &idle_cpu_mask);
 }
 
 /*
@@ -643,7 +643,21 @@ static void wake_up_idle_cpus(void *v)
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
-	wake_up_idle_cpus(v);
+	static unsigned long prev_latency = ULONG_MAX;
+
+	if (l < prev_latency) {
+		unsigned long idle_cpus = atomic_read(&idle_cpu_mask);
+		struct cpumask *update_mask = to_cpumask(&idle_cpus);
+
+		cpumask_and(update_mask, update_mask, v);
+		cpumask_andnot(update_mask, update_mask, cpu_isolated_mask);
+
+		/* Notifier is called with preemption disabled */
+		arch_send_call_function_ipi_mask(update_mask);
+	}
+
+	prev_latency = l;
+
 	return NOTIFY_OK;
 }
 
@@ -657,6 +671,14 @@ static inline void latency_notifier_init(struct notifier_block *n)
 }
 
 #else /* CONFIG_SMP */
+
+static void cpuidle_set_idle_cpu(unsigned int cpu)
+{
+}
+
+static void cpuidle_clear_idle_cpu(unsigned int cpu)
+{
+}
 
 #define latency_notifier_init(x) do { } while (0)
 
