@@ -218,8 +218,6 @@ struct drm_bridge {
 
 	const struct drm_bridge_funcs *funcs;
 	void *driver_private;
-	struct mutex lock;
-	bool is_dsi_drm_bridge;
 };
 
 int drm_bridge_add(struct drm_bridge *bridge);
