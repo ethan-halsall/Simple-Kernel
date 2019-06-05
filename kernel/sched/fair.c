@@ -7745,7 +7745,9 @@ task_is_boosted(struct task_struct *p) {
 static inline bool
 cpu_is_in_target_set(struct task_struct *p, int cpu)
 {
-	int first_cpu = start_cpu(task_is_boosted(p));
+	bool boosted = task_is_boosted(p);
+
+	int first_cpu = start_cpu(p, boosted, NULL);
 	int next_usable_cpu = cpumask_next(first_cpu - 1, tsk_cpus_allowed(p));
 	return cpu >= next_usable_cpu || next_usable_cpu >= nr_cpu_ids;
 }
@@ -7977,6 +7979,8 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	int want_affine = 0;
 	int sync = wake_flags & WF_SYNC;
 
+	bool boosted = task_is_boosted(p);
+
 	if (sd_flag & SD_BALANCE_WAKE) {
 		int _wake_cap = wake_cap(p, cpu, prev_cpu);
 
@@ -8004,7 +8008,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		 * that the selection algorithm for a boosted task
 		 * should be used.
 		 */
-		bool sync_boost = sync && cpu >= start_cpu(true);
+		bool sync_boost = sync && cpu >= start_cpu(p, boosted, NULL);
 		new_cpu = select_energy_cpu_brute(p, prev_cpu, sync_boost);
 		rcu_read_unlock();
 		return new_cpu;
