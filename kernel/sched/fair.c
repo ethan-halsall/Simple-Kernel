@@ -6219,7 +6219,8 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	if (capacity == max_capacity)
 		return true;
 
-	if (task_boost_policy(p) == SCHED_BOOST_ON_BIG)
+	if (task_boost_policy(p) == SCHED_BOOST_ON_BIG ||
+			schedtune_task_boost(p) > 0)
 		return false;
 
 	return __task_fits(p, cpu, 0);
@@ -6919,11 +6920,11 @@ static unsigned long cpu_estimated_capacity(int cpu, struct task_struct *p)
 static bool is_packing_eligible(struct task_struct *p, int target_cpu,
 				struct find_best_target_env *fbt_env,
 				unsigned int target_cpus_count,
-				int best_idle_cstate)
+				int best_idle_cstate, bool boosted)
 {
 	unsigned long estimated_capacity;
 
-	if (fbt_env->placement_boost || fbt_env->need_idle)
+	if (fbt_env->placement_boost || fbt_env->need_idle || boosted)
 		return false;
 
 	if (best_idle_cstate == -1)
@@ -7308,7 +7309,7 @@ retry:
 	} while (sg = sg->next, sg != sd->groups);
 
 	if (best_idle_cpu != -1 && !is_packing_eligible(p, target_cpu, fbt_env,
-					active_cpus_count, best_idle_cstate)) {
+					active_cpus_count, best_idle_cstate, boosted)) {
 		if (target_cpu == prev_cpu)
 			fbt_env->avoid_prev_cpu = true;
 
