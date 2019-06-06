@@ -171,6 +171,11 @@ config GPIO_USB_DETECT
 	  USB driver of VBUS presence/disconnection using the power_supply
 	  framework.
 
+config GSI_DEBUGFS
+	bool "GSI debugfs interface"
+	depends on GSI || DEBUG_FS
+	default n
+
 config MSM_MHI_DEV
         tristate "Modem Device Interface Driver"
 	depends on EP_PCIE && IPA3
