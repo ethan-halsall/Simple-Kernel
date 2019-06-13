@@ -47,6 +47,9 @@
 #include "ion_priv.h"
 #include "compat_ion.h"
 
+static struct kmem_cache *ion_page_pool;
+static struct kmem_cache *ion_sg_table_pool;
+
 bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer)
 {
 	return (buffer->flags & ION_FLAG_CACHED) &&
@@ -984,6 +987,34 @@ struct sg_table *ion_sg_table(struct ion_client *client,
 }
 EXPORT_SYMBOL(ion_sg_table);
 
+static struct scatterlist *ion_sg_alloc(unsigned int nents, gfp_t gfp_mask)
+{
+	if (nents == SG_MAX_SINGLE_ALLOC)
+		return kmem_cache_alloc(ion_page_pool, gfp_mask);
+
+	return kmalloc(nents * sizeof(struct scatterlist), gfp_mask);
+}
+
+static void ion_sg_free(struct scatterlist *sg, unsigned int nents)
+{
+	if (nents == SG_MAX_SINGLE_ALLOC)
+		kmem_cache_free(ion_page_pool, sg);
+	else
+		kfree(sg);
+}
+
+static int ion_sg_alloc_table(struct sg_table *table, unsigned int nents,
+			      gfp_t gfp_mask)
+{
+	return __sg_alloc_table(table, nents, SG_MAX_SINGLE_ALLOC, NULL,
+				gfp_mask, ion_sg_alloc);
+}
+
+static void ion_sg_free_table(struct sg_table *table)
+{
+	__sg_free_table(table, SG_MAX_SINGLE_ALLOC, false, ion_sg_free);
+}
+
 struct sg_table *ion_create_chunked_sg_table(phys_addr_t buffer_base,
 					     size_t chunk_size,
 					     size_t total_size)
@@ -992,14 +1023,14 @@ struct sg_table *ion_create_chunked_sg_table(phys_addr_t buffer_base,
 	int i, n_chunks, ret;
 	struct scatterlist *sg;
 
-	table = kzalloc(sizeof(*table), GFP_KERNEL);
+	table = kmem_cache_alloc(ion_sg_table_pool, GFP_KERNEL);
 	if (!table)
 		return ERR_PTR(-ENOMEM);
 
 	n_chunks = DIV_ROUND_UP(total_size, chunk_size);
 	pr_debug("creating sg_table with %d chunks\n", n_chunks);
 
-	ret = sg_alloc_table(table, n_chunks, GFP_KERNEL);
+	ret = ion_sg_alloc_table(table, n_chunks, GFP_KERNEL);
 	if (ret)
 		goto err0;
 
@@ -1012,7 +1043,7 @@ struct sg_table *ion_create_chunked_sg_table(phys_addr_t buffer_base,
 
 	return table;
 err0:
-	kfree(table);
+	kmem_cache_free(ion_sg_table_pool, table);
 	return ERR_PTR(ret);
 }
 
@@ -1022,19 +1053,19 @@ static struct sg_table *ion_dupe_sg_table(struct sg_table *orig_table)
 	struct scatterlist *sg, *sg_orig;
 	struct sg_table *table;
 
-	table = kzalloc(sizeof(*table), GFP_KERNEL);
+	table = kmem_cache_alloc(ion_sg_table_pool, GFP_KERNEL);
 	if (!table)
 		return NULL;
 
-	ret = sg_alloc_table(table, orig_table->nents, GFP_KERNEL);
+	ret = ion_sg_alloc_table(table, orig_table->nents, GFP_KERNEL);
 	if (ret) {
-		kfree(table);
+		kmem_cache_free(ion_sg_table_pool, table);
 		return NULL;
 	}
 
 	sg_orig = orig_table->sgl;
 	for_each_sg(table->sgl, sg, table->nents, i) {
-		memcpy(sg, sg_orig, sizeof(*sg));
+		*sg = *sg_orig;
 		sg_orig = sg_next(sg_orig);
 	}
 	return table;
@@ -1063,8 +1094,8 @@ static void ion_unmap_dma_buf(struct dma_buf_attachment *attachment,
 			      struct sg_table *table,
 			      enum dma_data_direction direction)
 {
-	sg_free_table(table);
-	kfree(table);
+	ion_sg_free_table(table);
+	kmem_cache_free(ion_sg_table_pool, table);
 }
 
 void ion_pages_sync_for_device(struct device *dev, struct page *page,
@@ -1965,6 +1996,20 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	if (!idev)
 		return ERR_PTR(-ENOMEM);
 
+	ion_sg_table_pool = KMEM_CACHE(sg_table, SLAB_HWCACHE_ALIGN);
+	if (!ion_sg_table_pool) {
+		kfree(idev);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	ion_page_pool = kmem_cache_create("ion_page", PAGE_SIZE, PAGE_SIZE,
+					  SLAB_HWCACHE_ALIGN, NULL);
+	if (!ion_page_pool) {
+		kmem_cache_destroy(ion_sg_table_pool);
+		kfree(idev);
+		return ERR_PTR(-ENOMEM);
+	}
+
 	idev->dev.minor = MISC_DYNAMIC_MINOR;
 	idev->dev.name = "ion";
 	idev->dev.fops = &ion_fops;
@@ -1972,6 +2017,8 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	ret = misc_register(&idev->dev);
 	if (ret) {
 		pr_err("ion: failed to register misc device.\n");
+		kmem_cache_destroy(ion_page_pool);
+		kmem_cache_destroy(ion_sg_table_pool);
 		kfree(idev);
 		return ERR_PTR(ret);
 	}
