@@ -2549,7 +2549,7 @@ static void smblib_reg_work(struct work_struct *work)
 static int smblib_therm_charging(struct smb_charger *chg)
 {
 	int thermal_icl_ua = 0;
-	int temp_level;
+	int temp_level = 0;
 	int rc;
 
 	if (chg->system_temp_level >= MAX_TEMP_LEVEL)
