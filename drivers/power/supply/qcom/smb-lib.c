@@ -632,7 +632,7 @@ static char version[8] = "smb:01:";
 static inline void dump_reg(struct smb_charger *chg, u16 addr,
 		const char *name)
 {
-	u8 reg;
+	u8 reg = 0;
 	int rc;
 	char reg_data[50] = "";
 
