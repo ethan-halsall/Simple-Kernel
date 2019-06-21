@@ -6840,7 +6840,7 @@ done:
 
 	return target;
 }
- 
+
 /*
  * cpu_util_wake: Compute cpu utilization with any contributions from
  * the waking task p removed.  check_for_migration() looks for a better CPU of
@@ -6974,7 +6974,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 	int best_idle_cpu = -1;
 	int target_cpu = -1;
 	int cpu, i;
-	long spare_cap, most_spare_cap = 0;
+	long spare_wake_cap, most_spare_wake_cap = 0;
 	int most_spare_cap_cpu = -1;
 	unsigned int active_cpus_count = 0;
 	int isolated_candidate = -1;
@@ -7041,10 +7041,10 @@ retry:
 			 */
 			wake_util = cpu_util_wake(i, p);
 			new_util = wake_util + task_util(p);
-			spare_cap = capacity_orig_of(i) - wake_util;
+			spare_wake_cap = capacity_orig_of(i) - wake_util;
 
-			if (spare_cap > most_spare_cap) {
-				most_spare_cap = spare_cap;
+			if (spare_wake_cap > most_spare_wake_cap) {
+				most_spare_wake_cap = spare_wake_cap;
 				most_spare_cap_cpu = i;
 			}
 
@@ -7369,7 +7369,7 @@ retry:
 /*
  * Disable WAKE_AFFINE in the case where task @p doesn't fit in the
  * capacity of either the waking CPU @cpu or the previous CPU @prev_cpu.
- * 
+ *
  * In that case WAKE_AFFINE doesn't make sense and we'll let
  * BALANCE_WAKE sort things out.
  */
