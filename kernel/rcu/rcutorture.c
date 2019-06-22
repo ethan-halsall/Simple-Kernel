@@ -1712,12 +1712,14 @@ static void rcu_torture_fwd_cb_cr(struct rcu_head *rhp)
 }
 
 // Give the scheduler a chance, even on nohz_full CPUs.
-static void rcu_torture_fwd_prog_cond_resched(void)
+static void rcu_torture_fwd_prog_cond_resched(unsigned long iter)
 {
 	if (IS_ENABLED(CONFIG_PREEMPT) && IS_ENABLED(CONFIG_NO_HZ_FULL)) {
-		if (need_resched())
+		// Real call_rcu() floods hit userspace, so emulate that.
+		if (need_resched() || (iter & 0xfff))
 			schedule();
 	} else {
+		// No userspace emulation: CB invocation throttles call_rcu()
 		cond_resched();
 	}
 }
@@ -1745,7 +1747,7 @@ static unsigned long rcu_torture_fwd_prog_cbfree(void)
 		spin_unlock_irqrestore(&rcu_fwd_lock, flags);
 		kfree(rfcp);
 		freed++;
-		rcu_torture_fwd_prog_cond_resched();
+		rcu_torture_fwd_prog_cond_resched(freed);
 	}
 	return freed;
 }
@@ -1789,7 +1791,7 @@ static void rcu_torture_fwd_prog_nr(int *tested, int *tested_tries)
 		udelay(10);
 		cur_ops->readunlock(idx);
 		if (!fwd_progress_need_resched || need_resched())
-			rcu_torture_fwd_prog_cond_resched();
+			rcu_torture_fwd_prog_cond_resched(1);
 	}
 	(*tested_tries)++;
 	if (!time_before(jiffies, stopat) &&
@@ -1874,7 +1876,7 @@ static void rcu_torture_fwd_prog_cr(void)
 			rfcp->rfc_gps = 0;
 		}
 		cur_ops->call(&rfcp->rh, rcu_torture_fwd_cb_cr);
-		rcu_torture_fwd_prog_cond_resched();
+		rcu_torture_fwd_prog_cond_resched(n_launders + n_max_cbs);
 	}
 	stoppedat = jiffies;
 	n_launders_cb_snap = READ_ONCE(n_launders_cb);
