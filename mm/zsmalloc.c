@@ -192,7 +192,6 @@ static struct vfsmount *zsmalloc_mnt;
  * (see: fix_fullness_group())
  */
 static const int fullness_threshold_frac = 4;
-static size_t huge_class_size;
 
 struct size_class {
 	spinlock_t lock;
@@ -276,7 +275,7 @@ struct zs_pool {
 struct zspage {
 	struct {
 		unsigned int fullness:FULLNESS_BITS;
-		unsigned int class:CLASS_BITS + 1;
+		unsigned int class:CLASS_BITS;
 		unsigned int isolated:ISOLATED_BITS;
 		unsigned int magic:MAGIC_VAL_BITS;
 	};
@@ -348,7 +347,7 @@ static void destroy_cache(struct zs_pool *pool)
 static unsigned long cache_alloc_handle(struct zs_pool *pool, gfp_t gfp)
 {
 	return (unsigned long)kmem_cache_alloc(pool->handle_cachep,
-			gfp & ~(__GFP_HIGHMEM|__GFP_MOVABLE|__GFP_CMA));
+			gfp & ~(__GFP_HIGHMEM|__GFP_MOVABLE));
 }
 
 static void cache_free_handle(struct zs_pool *pool, unsigned long handle)
@@ -359,7 +358,7 @@ static void cache_free_handle(struct zs_pool *pool, unsigned long handle)
 static struct zspage *cache_alloc_zspage(struct zs_pool *pool, gfp_t flags)
 {
 	return kmem_cache_alloc(pool->zspage_cachep,
-			flags & ~(__GFP_HIGHMEM|__GFP_MOVABLE|__GFP_CMA));
+			flags & ~(__GFP_HIGHMEM|__GFP_MOVABLE));
 };
 
 static void cache_free_zspage(struct zs_pool *pool, struct zspage *zspage)
@@ -484,7 +483,7 @@ static bool is_zspage_isolated(struct zspage *zspage)
 	return zspage->isolated;
 }
 
-static __maybe_unused int is_first_page(struct page *page)
+static int is_first_page(struct page *page)
 {
 	return PagePrivate(page);
 }
@@ -569,23 +568,20 @@ static int get_size_class_index(int size)
 	return min_t(int, ZS_SIZE_CLASSES - 1, idx);
 }
 
-/* type can be of enum type zs_stat_type or fullness_group */
 static inline void zs_stat_inc(struct size_class *class,
-				int type, unsigned long cnt)
+				enum zs_stat_type type, unsigned long cnt)
 {
 	class->stats.objs[type] += cnt;
 }
 
-/* type can be of enum type zs_stat_type or fullness_group */
 static inline void zs_stat_dec(struct size_class *class,
-				int type, unsigned long cnt)
+				enum zs_stat_type type, unsigned long cnt)
 {
 	class->stats.objs[type] -= cnt;
 }
 
-/* type can be of enum type zs_stat_type or fullness_group */
 static inline unsigned long zs_stat_get(struct size_class *class,
-				int type)
+				enum zs_stat_type type)
 {
 	return class->stats.objs[type];
 }
@@ -1394,7 +1390,7 @@ void *zs_map_object(struct zs_pool *pool, unsigned long handle,
 	 * pools/users, we can't allow mapping in interrupt context
 	 * because it can corrupt another users mappings.
 	 */
-	BUG_ON(in_interrupt());
+	WARN_ON_ONCE(in_interrupt());
 
 	/* From now on, migration cannot move the object */
 	pin_tag(handle);
@@ -1470,25 +1466,6 @@ void zs_unmap_object(struct zs_pool *pool, unsigned long handle)
 	unpin_tag(handle);
 }
 EXPORT_SYMBOL_GPL(zs_unmap_object);
-
-/**
- * zs_huge_class_size() - Returns the size (in bytes) of the first huge
- *                        zsmalloc &size_class.
- * @pool: zsmalloc pool to use
- *
- * The function returns the size of the first huge class - any object of equal
- * or bigger size will be stored in zspage consisting of a single physical
- * page.
- *
- * Context: Any context.
- *
- * Return: the size (in bytes) of the first huge zsmalloc &size_class.
- */
-size_t zs_huge_class_size(struct zs_pool *pool)
-{
-	return huge_class_size;
-}
-EXPORT_SYMBOL_GPL(zs_huge_class_size);
 
 static unsigned long obj_malloc(struct size_class *class,
 				struct zspage *zspage, unsigned long handle)
@@ -2528,27 +2505,6 @@ struct zs_pool *zs_create_pool(const char *name)
 			size = ZS_MAX_ALLOC_SIZE;
 		pages_per_zspage = get_pages_per_zspage(size);
 		objs_per_zspage = pages_per_zspage * PAGE_SIZE / size;
-
-		/*
-		 * We iterate from biggest down to smallest classes,
-		 * so huge_class_size holds the size of the first huge
-		 * class. Any object bigger than or equal to that will
-		 * endup in the huge class.
-		 */
-		if (pages_per_zspage != 1 && objs_per_zspage != 1 &&
-				!huge_class_size) {
-			huge_class_size = size;
-			/*
-			 * The object uses ZS_HANDLE_SIZE bytes to store the
-			 * handle. We need to subtract it, because zs_malloc()
-			 * unconditionally adds handle size before it performs
-			 * size class search - so object may be smaller than
-			 * huge class size, yet it still can end up in the huge
-			 * class because it grows by ZS_HANDLE_SIZE extra bytes
-			 * right before class lookup.
-			 */
-			huge_class_size -= (ZS_HANDLE_SIZE - 1);
-		}
 
 		/*
 		 * size_class is used for normal zsmalloc operation such
