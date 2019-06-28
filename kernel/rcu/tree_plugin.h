@@ -619,8 +619,9 @@ static void rcu_read_unlock_special(struct task_struct *t)
 	if (preempt_bh_were_disabled || irqs_were_disabled) {
 		t->rcu_read_unlock_special.b.exp_hint = false;
 		// Need to defer quiescent state until everything is enabled.
-		if ((exp || in_irq()) && irqs_were_disabled && use_softirq &&
-		    (in_irq() || !t->rcu_read_unlock_special.b.deferred_qs)) {
+		if (irqs_were_disabled && use_softirq &&
+		    (in_interrupt() ||
+		     (exp && !t->rcu_read_unlock_special.b.deferred_qs))) {
 			// Using softirq, safe to awaken, and we get
 			// no help from enabling irqs, unlike bh/preempt.
 			raise_softirq_irqoff(RCU_SOFTIRQ);
