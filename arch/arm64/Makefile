@@ -100,6 +100,25 @@ LD		+= -EL
 UTS_MACHINE	:= aarch64
 endif
 
+# SDM845 Optimization
+ifeq ($(cc-name),clang)
+KBUILD_CFLAGS	+=	$(call cc-option,-mcpu=cortex-a55,) \
+					$(call cc-option,-march=armv8.2-a,) \
+					$(call cc-option,-mtune=cortex-a55,)
+
+KBUILD_AFLAGS	+=	$(call cc-option,-mcpu=cortex-a55,) \
+					$(call cc-option,-march=armv8.2-a,) \
+					$(call cc-option,-mtune=cortex-a55,)
+else
+KBUILD_CFLAGS	+=	$(call cc-option,-mcpu=cortex-a75.cortex-a55,) \
+					$(call cc-option,-march=armv8.2-a,) \
+					$(call cc-option,-mtune=cortex-a75.cortex-a55,)
+
+KBUILD_AFLAGS	+=	$(call cc-option,-mcpu=cortex-a75.cortex-a55,) \
+					$(call cc-option,-march=armv8.2-a,) \
+					$(call cc-option,-mtune=cortex-a75.cortex-a55,)
+endif
+
 CHECKFLAGS	+= -D__aarch64__
 
 ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
