@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -414,6 +414,8 @@ void cam_isp_hw_get_timestamp(struct cam_isp_timestamp *time_stamp)
 	get_monotonic_boottime(&ts);
 	time_stamp->mono_time.tv_sec    = ts.tv_sec;
 	time_stamp->mono_time.tv_usec   = ts.tv_nsec/1000;
+	time_stamp->time_usecs =  ts.tv_sec * 1000000 +
+				time_stamp->mono_time.tv_usec;
 }
 
 static int cam_vfe_irq_top_half(uint32_t    evt_id,

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -183,6 +183,9 @@ struct cam_isp_context {
 	struct cam_isp_context_state_monitor cam_isp_ctx_state_monitor[
 		CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES];
 	bool                             rdi_only_context;
+	bool                             irq_delay_detect;
+	uint64_t                         irq_timestamps;
+	uint64_t                         irq_timestamps_th;
 };
 
 /**
