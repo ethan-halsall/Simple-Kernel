@@ -517,6 +517,13 @@ config ARCH_SUPPORTS_LTO_CLANG
 	  - compiling inline assembly with clang's integrated assembler,
 	  - and linking with either lld or GNU gold w/ LLVMgold.
 
+config THINLTO
+	bool "Use clang ThinLTO (EXPERIMENTAL)"
+	depends on LTO_CLANG
+	default y
+	help
+	  Use ThinLTO to speed up Link Time Optimization.
+
 choice
 	prompt "Link-Time Optimization (LTO) (EXPERIMENTAL)"
 	default LTO_NONE
@@ -545,16 +552,6 @@ config LTO_CLANG
           LLVMgold plug-in in LD_LIBRARY_PATH.
 
 endchoice
-
-config LTO_CLANG_THIN
-	bool "Use clang ThinLTO in lieu of monolithic (EXPERIMENTAL)"
-	depends on LTO_CLANG
-	help
-	  This option enables ThinLTO, an alternative to monolithic LTO which is
-	  less resource-intensive resulting in significantly faster compilation
-	  while preserving many of the performance benefits associated with
-	  traditional LTO. This can be particularly useful for development and
-	  incremental builds.
 
 config CFI
 	bool
