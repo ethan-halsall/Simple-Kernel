@@ -47,7 +47,6 @@
 #include "ion_priv.h"
 #include "compat_ion.h"
 
-static struct kmem_cache *ion_page_pool;
 static struct kmem_cache *ion_sg_table_pool;
 
 bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer)
@@ -989,30 +988,22 @@ EXPORT_SYMBOL(ion_sg_table);
 
 static struct scatterlist *ion_sg_alloc(unsigned int nents, gfp_t gfp_mask)
 {
-	if (nents == SG_MAX_SINGLE_ALLOC)
-		return kmem_cache_alloc(ion_page_pool, gfp_mask);
-
-	return kmalloc(nents * sizeof(struct scatterlist), gfp_mask);
+	return vmalloc(nents * sizeof(struct scatterlist));
 }
 
 static void ion_sg_free(struct scatterlist *sg, unsigned int nents)
 {
-	if (nents == SG_MAX_SINGLE_ALLOC)
-		kmem_cache_free(ion_page_pool, sg);
-	else
-		kfree(sg);
+	vfree(sg);
 }
 
-static int ion_sg_alloc_table(struct sg_table *table, unsigned int nents,
-			      gfp_t gfp_mask)
+static int ion_sg_alloc_table(struct sg_table *table, unsigned int nents)
 {
-	return __sg_alloc_table(table, nents, SG_MAX_SINGLE_ALLOC, NULL,
-				gfp_mask, ion_sg_alloc);
+	return __sg_alloc_table(table, nents, UINT_MAX, NULL, 0, ion_sg_alloc);
 }
 
 static void ion_sg_free_table(struct sg_table *table)
 {
-	__sg_free_table(table, SG_MAX_SINGLE_ALLOC, false, ion_sg_free);
+	__sg_free_table(table, UINT_MAX, false, ion_sg_free);
 }
 
 struct sg_table *ion_create_chunked_sg_table(phys_addr_t buffer_base,
@@ -1057,7 +1048,7 @@ static struct sg_table *ion_dupe_sg_table(struct sg_table *orig_table)
 	if (!table)
 		return NULL;
 
-	ret = ion_sg_alloc_table(table, orig_table->nents, GFP_KERNEL);
+	ret = ion_sg_alloc_table(table, orig_table->nents);
 	if (ret) {
 		kmem_cache_free(ion_sg_table_pool, table);
 		return NULL;
@@ -2002,14 +1993,6 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 		return ERR_PTR(-ENOMEM);
 	}
 
-	ion_page_pool = kmem_cache_create("ion_page", PAGE_SIZE, PAGE_SIZE,
-					  SLAB_HWCACHE_ALIGN, NULL);
-	if (!ion_page_pool) {
-		kmem_cache_destroy(ion_sg_table_pool);
-		kfree(idev);
-		return ERR_PTR(-ENOMEM);
-	}
-
 	idev->dev.minor = MISC_DYNAMIC_MINOR;
 	idev->dev.name = "ion";
 	idev->dev.fops = &ion_fops;
@@ -2017,7 +2000,6 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	ret = misc_register(&idev->dev);
 	if (ret) {
 		pr_err("ion: failed to register misc device.\n");
-		kmem_cache_destroy(ion_page_pool);
 		kmem_cache_destroy(ion_sg_table_pool);
 		kfree(idev);
 		return ERR_PTR(ret);
