@@ -1551,6 +1551,7 @@ config LD_DEAD_CODE_DATA_ELIMINATION
 	bool "Dead code and data elimination (EXPERIMENTAL)"
 	depends on HAVE_LD_DEAD_CODE_DATA_ELIMINATION
 	depends on EXPERT
+	select LD_GOLD
 	help
 	  Select this if the architecture wants to do dead code and
 	  data elimination with the linker by compiling with
