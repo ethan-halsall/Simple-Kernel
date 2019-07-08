@@ -87,10 +87,11 @@
 #define CAM_ISP_GENERIC_BLOB_TYPE_HFR_CONFIG          0
 #define CAM_ISP_GENERIC_BLOB_TYPE_CLOCK_CONFIG        1
 #define CAM_ISP_GENERIC_BLOB_TYPE_BW_CONFIG           2
-#define CAM_ISP_GENERIC_BLOB_TYPE_UBWC_CONFIG         3
-#define CAM_ISP_GENERIC_BLOB_TYPE_CSID_CLOCK_CONFIG   4
-#define CAM_ISP_GENERIC_BLOB_TYPE_FE_CONFIG           5
-#define CAM_ISP_GENERIC_BLOB_TYPE_BW_CONFIG_V2        6
+#define CAM_ISP_GENERIC_BLOB_TYPE_FPS_CONFIG          3
+#define CAM_ISP_GENERIC_BLOB_TYPE_UBWC_CONFIG         4
+#define CAM_ISP_GENERIC_BLOB_TYPE_CSID_CLOCK_CONFIG   5
+#define CAM_ISP_GENERIC_BLOB_TYPE_FE_CONFIG           6
+#define CAM_ISP_GENERIC_BLOB_TYPE_BW_CONFIG_V2        7
 
 /* Query devices */
 /**
@@ -445,6 +446,16 @@ struct cam_fe_config {
 	uint32_t    unpacker_cfg;
 	uint32_t    latency_buf_size;
 } __attribute__((packed));
+
+/**
+ * struct cam_isp_fps_config - ISP usecase fps param
+ *
+ * @fps                 : usecase fps
+ */
+struct cam_isp_fps_config {
+	uint32_t    fps;
+} __attribute__((packed));
+
 
 /* Acquire Device/HW v2 */
 
