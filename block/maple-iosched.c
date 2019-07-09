@@ -5,6 +5,7 @@
  * Copyright (C) 2016 Joe Maples <joe@frap129.org>
  *           (C) 2012 Brandon Berhent <bbedward@gmail.com
  *           (C) 2012 Miguel Boton <mboton@gmail.com>
+ *           (C) 2019 Adam W. Willis <return_of_octobot@gmail.com>
  *
  * Maple uses a first come first serve style algorithm with seperated read/write
  * handling to allow for read biases. By prioritizing reads, simple tasks should
@@ -19,7 +20,7 @@
 #include <linux/slab.h>
 #include <linux/msm_drm_notify.h>
 
-#define MAPLE_IOSCHED_PATCHLEVEL	(8)
+#define MAPLE_IOSCHED_PATCHLEVEL	(DRM-9)
 
 enum { ASYNC, SYNC };
 
