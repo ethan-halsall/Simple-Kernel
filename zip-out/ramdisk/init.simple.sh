@@ -40,15 +40,6 @@ done;
 # Disable CAF task placement for Big Cores
 echo 0 > /proc/sys/kernel/sched_walt_rotate_big_tasks
 
-# Enable Boost_No_Override
-echo 1 > /dev/stune/foreground/schedtune.sched_boost_no_override
-echo 1 > /dev/stune/top-app/schedtune.sched_boost_no_override
-
-# Set default schedTune value for foreground/top-app
-echo 1 > /dev/stune/foreground/schedtune.prefer_idle 
-echo 1 > /dev/stune/top-app/schedtune.prefer_idle
-echo 5 > /dev/stune/top-app/schedtune.sched_boost
-
 # Setup EAS cpusets values for better load balancing
 echo "0-7" > /dev/cpuset/top-app/cpus 
 
@@ -62,28 +53,6 @@ echo "0-3" > /dev/cpuset/kernel/cpus
 
 # For better screen off idle
 echo "0-3" > /dev/cpuset/restricted/cpus 
-
-# Enable scheduler core_ctl
-echo 0 > /sys/devices/system/cpu/cpu0/core_ctl/enable
-echo 0 > /sys/devices/system/cpu/cpu4/core_ctl/enable
-
-# Increase how much CPU bandwidth (CPU time) realtime scheduling processes are given
-echo "980000" > /proc/sys/kernel/sched_rt_runtime_us
-
-# configure governor settings for little cluster
-echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
-echo 0 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/pl
-echo 500 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/up_rate_limit_us
-echo 20000 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/down_rate_limit_us 
-	
-# configure governor settings for big cluster
-echo "schedutil" > /sys/devices/system/cpu/cpufreq/policy4/scaling_governor
-echo 0 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/pl
-echo 500 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/up_rate_limit_us
-echo 20000 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/down_rate_limit_us 
-
-# Disable in-kernel sched statistics for reduced overhead;
-echo "0" > /proc/sys/kernel/sched_schedstats
 
 #Enable suspend to idle mode to reduce latency during suspend/resume
 echo "s2idle" > /sys/power/mem_sleep
