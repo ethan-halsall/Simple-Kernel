@@ -9,7 +9,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
- 
+
 /*
  * Copyright (C) 2019 Raphiel Rollerscaperers <raphielscape@outlook.com>
  *
@@ -291,30 +291,6 @@
 				type = "passive";
 			};
 		};
-	};
-
-	ibat-high {
-		status = "disabled";
-	};
-
-	ibat-vhigh {
-		status = "disabled";
-	};
-
-	vbat {
-		status = "disabled";
-	};
-
-	vbat_low {
-		status = "disabled";
-	};
-
-	vbat_too_low {
-		status = "disabled";
-	};
-
-	soc {
-		status = "disabled";
 	};
 
 	aoss0-usr {
