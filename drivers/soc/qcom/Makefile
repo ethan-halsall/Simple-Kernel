@@ -114,3 +114,4 @@ obj-$(CONFIG_BIG_CLUSTER_MIN_FREQ_ADJUST) += big_cluster_min_freq_adjust.o
 
 CFLAGS_rpm_stats.o += -DCONFIG_DEBUG_FS
 CFLAGS_rpm_master_stat.o += -DCONFIG_DEBUG_FS
+CFLAGS_rpmh_master_stat.o += -DCONFIG_DEBUG_FS
