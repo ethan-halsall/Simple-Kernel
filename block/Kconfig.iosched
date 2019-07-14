@@ -2,25 +2,6 @@ if BLOCK
 
 menu "IO Schedulers"
 
-config IOSCHED_NOOP
-	bool
-	default y
-	---help---
-	  The no-op I/O scheduler is a minimal scheduler that does basic merging
-	  and sorting. Its main uses include non-disk based block devices like
-	  memory devices, and specialised software or hardware environments
-	  that do their own scheduling and require only minimal assistance from
-	  the kernel.
-
-config IOSCHED_DEADLINE
-	tristate "Deadline I/O scheduler"
-	default y
-	---help---
-	  The deadline I/O scheduler is simple and compact. It will provide
-	  CSCAN service with FIFO expiration of requests, switching to
-	  a new point in the service tree and doing a batch of IO from there
-	  in case of expiry.
-
 config IOSCHED_CFQ
 	tristate "CFQ I/O scheduler"
 	default y
