@@ -4744,6 +4744,7 @@ CONFIG_BCM_GPS_SPI_DRIVER=y
 # Halls
 #
 # CONFIG_HALLS is not set
+CONFIG_AINUR_DTS_SW=y
 
 #
 # Firmware Drivers
