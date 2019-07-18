@@ -14,9 +14,6 @@
 #include <linux/init.h>
 #include <linux/string.h>
 
-#include "touchscreen/synaptics_driver_s3320_custom.h"
-#include "fingerprint/fpc/fpc1020_tee_custom.h"
-
 /**
  * This driver maintains a sysfs interface used by the pocket bridge system
  * service. It enables and disables interrupts based on pocket state to
@@ -28,12 +25,6 @@
 
 static bool pocket_judge_inpocket = false;
 EXPORT_SYMBOL(pocket_judge_inpocket);
-
-static void pocket_judge_update(void)
-{
-	synaptics_s3320_enable_global(!pocket_judge_inpocket);
-	fpc1020_enable_global(!pocket_judge_inpocket);
-}
 
 static ssize_t inpocket_show(struct device *dev, struct device_attribute *attr,
 			     char *buf)
@@ -53,7 +44,6 @@ static ssize_t inpocket_store(struct device *dev, struct device_attribute *attr,
 
 	if (pocket_judge_inpocket != state) {
 		pocket_judge_inpocket = state;
-		pocket_judge_update();
 	}
 
 	return size;
