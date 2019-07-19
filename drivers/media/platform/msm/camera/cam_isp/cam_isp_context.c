@@ -361,6 +361,7 @@ static int __cam_isp_ctx_handle_buf_done_in_activated_state(
 
 	trace_cam_buf_done("ISP", ctx, req);
 
+	ctx_isp->irq_delay_detect = 0;
 	req_isp = (struct cam_isp_ctx_req *) req->req_priv;
 	if (ctx_isp->frame_id == 1)
 		ctx_isp->irq_timestamps = done->irq_mono_boot_time;
@@ -1653,6 +1654,15 @@ static int __cam_isp_ctx_rdi_only_sof_in_top_state(
 
 	CAM_DBG(CAM_ISP, "next substate %d",
 		ctx_isp->substate_activated);
+
+
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+	else if (sof_event_data->irq_mono_boot_time -
+		ctx_isp->irq_timestamps > ctx_isp->irq_timestamps_th)
+		ctx_isp->irq_delay_detect = 1;
+	ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+
 	return rc;
 }
 
@@ -1674,6 +1684,13 @@ static int __cam_isp_ctx_rdi_only_sof_in_applied_state(
 
 	ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_BUBBLE_APPLIED;
 	CAM_DBG(CAM_ISP, "next substate %d", ctx_isp->substate_activated);
+
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+	else if (sof_event_data->irq_mono_boot_time -
+		ctx_isp->irq_timestamps > ctx_isp->irq_timestamps_th)
+		ctx_isp->irq_delay_detect = 1;
+	ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
 
 	return 0;
 }
@@ -1765,6 +1782,14 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_applied(
 
 	/* change the state to bubble, as reg update has not come */
 	ctx_isp->substate_activated = CAM_ISP_CTX_ACTIVATED_BUBBLE;
+
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+	else if (sof_event_data->irq_mono_boot_time -
+		ctx_isp->irq_timestamps > ctx_isp->irq_timestamps_th)
+		ctx_isp->irq_delay_detect = 1;
+	ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+
 	CAM_DBG(CAM_ISP, "next substate %d", ctx_isp->substate_activated);
 end:
 	return 0;
@@ -1838,6 +1863,12 @@ static int __cam_isp_ctx_rdi_only_sof_in_bubble_state(
 
 	CAM_DBG(CAM_ISP, "next substate %d",
 		ctx_isp->substate_activated);
+	if (ctx_isp->frame_id == 1)
+		ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
+	else if (sof_event_data->irq_mono_boot_time -
+		ctx_isp->irq_timestamps > ctx_isp->irq_timestamps_th)
+		ctx_isp->irq_delay_detect = 1;
+	ctx_isp->irq_timestamps = sof_event_data->irq_mono_boot_time;
 
 	return 0;
 }
