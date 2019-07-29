@@ -728,6 +728,7 @@ else
 KBUILD_CFLAGS   += -O3
 ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
+KBUILD_CFLAGS	+= -ftree-loop-distribution -fmerge-all-constants
 endif
 endif
 endif
