@@ -1909,6 +1909,7 @@ CONFIG_INPUT_EVDEV=y
 # CONFIG_INPUT_EVBUG is not set
 # CONFIG_INPUT_KEYRESET is not set
 # CONFIG_INPUT_KEYCOMBO is not set
+CONFIG_POCKET_JUDGE=y
 
 #
 # Input Device Drivers
