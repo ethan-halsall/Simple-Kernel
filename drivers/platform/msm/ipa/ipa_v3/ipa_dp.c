@@ -480,7 +480,8 @@ failure:
 		tx_pkt = next_pkt;
 	}
 
-	kfree(gsi_xfer_elem_array);
+	if (unlikely(gsi_xfer_elem_array != gsi_xfer_elem_array_onstack))
+		kfree(gsi_xfer_elem_array);
 
 	spin_unlock_bh(&sys->spinlock);
 	return result;
