@@ -6217,7 +6217,7 @@ static inline bool task_fits_max(struct task_struct *p, int cpu)
 	return __task_fits(p, cpu, 0);
 }
 
-bool __cpu_overutilized(int cpu, int delta)S
+bool __cpu_overutilized(int cpu, int delta)
 {
 	return (capacity_orig_of(cpu) * 1024) <
 			((cpu_util(cpu) + delta) * capacity_margin);
