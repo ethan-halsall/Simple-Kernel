@@ -12,3 +12,5 @@ obj-$(CONFIG_ION_TEGRA) += tegra/
 obj-$(CONFIG_ION_HISI) += hisilicon/
 
 obj-$(CONFIG_ION_MSM) += msm/
+
+CFLAGS_ion_system_heap.o += -Wframe-larger-than=8192
