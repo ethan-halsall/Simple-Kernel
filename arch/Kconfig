@@ -574,6 +574,16 @@ config CFI_CLANG_SHADOW
 	  If you select this option, the kernel builds a fast look-up table of
 	  CFI check functions in loaded modules to reduce overhead.
 
+config POLLY_CLANG
+	bool "Enable clang Polly optimizations"
+	help
+	  This option enables Clang's polyhedral loop optimizer known as Polly.
+	  Polly is able to optimize various loops throughout the kernel for
+	  maximum cache locality. This requires a Clang toolchain compiled
+	  with support for Polly.
+
+	  For more information, see Polly's website: https://polly.llvm.org/
+
 config HAVE_ARCH_WITHIN_STACK_FRAMES
 	bool
 	help
