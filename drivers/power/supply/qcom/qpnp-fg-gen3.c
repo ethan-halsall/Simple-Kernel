@@ -682,6 +682,18 @@ static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 	return 0;
 }
 
+static int fg_get_battery_esr(struct fg_chip *chip, int *val)
+{
+	int rc, esr_uohms;
+		rc = fg_get_sram_prop(chip, FG_SRAM_ESR, &esr_uohms);
+	if (rc < 0) {
+		pr_err("failed to get ESR, rc=%d\n", rc);
+		return rc;
+	}
+	*val = esr_uohms;
+	return esr_uohms;
+}
+
 static int fg_get_battery_resistance(struct fg_chip *chip, int *val)
 {
 	int rc, esr_uohms, rslow_uohms;
@@ -4128,6 +4140,9 @@ static int fg_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_RESISTANCE:
 		rc = fg_get_battery_resistance(chip, &pval->intval);
 		break;
+	case POWER_SUPPLY_PROP_ESR:
+		rc = fg_get_battery_esr(chip, &pval->intval);
+		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_OCV:
 		rc = fg_get_sram_prop(chip, FG_SRAM_OCV, &pval->intval);
 		break;
@@ -4390,6 +4405,7 @@ static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_RESISTANCE_ID,
 	POWER_SUPPLY_PROP_RESISTANCE,
+	POWER_SUPPLY_PROP_ESR,
 	POWER_SUPPLY_PROP_BATTERY_TYPE,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
