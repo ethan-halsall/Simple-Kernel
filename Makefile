@@ -726,10 +726,10 @@ else
 ifdef CONFIG_PROFILE_ALL_BRANCHES
 KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,)
 else
+ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -O3
-ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
-KBUILD_CFLAGS	+= -ftree-loop-distribution -fmerge-all-constants -ffast-math 
+else
+KBUILD_CFLAGS   += -O2
 endif
 endif
 endif
