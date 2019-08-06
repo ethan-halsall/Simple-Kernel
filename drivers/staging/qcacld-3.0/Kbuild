@@ -2041,7 +2041,7 @@ cppflags-y += -DQCA_HOST2FW_RXBUF_RING
 # Enable lock of serialization component to avoid race condition issues
 cppflags-y += -DWLAN_CMD_SERIALIZATION_LOCKING
 
-ccflags-y += -Os
+ccflags-$(CONFIG_ENABLE_SIZE_OPTIMIZE) += -Os
 
 # DFS component
 cppflags-y += -DWLAN_DFS_STATIC_MEM_ALLOC
