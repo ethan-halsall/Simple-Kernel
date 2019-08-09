@@ -2184,27 +2184,48 @@ static int fg_adjust_recharge_soc(struct fg_chip *chip)
 	 * the recharge SOC threshold based on the monotonic SOC at which
 	 * the charge termination had happened.
 	 */
-	if (is_input_present(chip) && !chip->recharge_soc_adjusted
-			&& chip->charge_done) {
-		if (chip->health == POWER_SUPPLY_HEALTH_GOOD)
-			return 0;
-		/* Get raw monotonic SOC for calculation */
-		rc = fg_get_msoc(chip, &msoc);
-		if (rc < 0) {
-			pr_err("Error in getting msoc, rc=%d\n", rc);
-			return rc;
-		}
+	if (is_input_present(chip)) {
+		if (chip->charge_done) {
+			if (!chip->recharge_soc_adjusted) {
+				/* Get raw monotonic SOC for calculation */
+				rc = fg_get_msoc(chip, &msoc);
+				if (rc < 0) {
+					pr_err("Error in getting msoc, rc=%d\n",
+						rc);
+					return rc;
+				}
 
-		/* Adjust the recharge_soc threshold */
-		new_recharge_soc = msoc - (FULL_CAPACITY - recharge_soc);
-		chip->recharge_soc_adjusted = true;
-	} else if ((!is_input_present(chip) || chip->health == POWER_SUPPLY_HEALTH_GOOD)
-					&& chip->recharge_soc_adjusted) {
+				/* Adjust the recharge_soc threshold */
+				new_recharge_soc = msoc - (FULL_CAPACITY -
+								recharge_soc);
+				chip->recharge_soc_adjusted = true;
+			} else {
+				/* adjusted already, do nothing */
+				if (chip->health != POWER_SUPPLY_HEALTH_GOOD)
+					return 0;
+
+				/*
+				 * Device is out of JEITA so restore the
+				 * default value
+				 */
+				new_recharge_soc = recharge_soc;
+				chip->recharge_soc_adjusted = false;
+			}
+		} else {
+			if (!chip->recharge_soc_adjusted)
+				return 0;
+
+			if (chip->health != POWER_SUPPLY_HEALTH_GOOD)
+				return 0;
+
+			/* Restore the default value */
+			new_recharge_soc = recharge_soc;
+			chip->recharge_soc_adjusted = false;
+		}
+	} else {
 		/* Restore the default value */
 		new_recharge_soc = recharge_soc;
 		chip->recharge_soc_adjusted = false;
-	} else {
-		return 0;
 	}
 
 	rc = fg_set_recharge_soc(chip, new_recharge_soc);
@@ -4090,9 +4111,6 @@ static int fg_psy_get_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = fg_get_prop_capacity(chip, &pval->intval);
-
-		if (chip->param.batt_soc >= 0)
-			pval->intval = chip->param.batt_soc;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_RAW:
 		rc = fg_get_msoc_raw(chip, &pval->intval);
@@ -5496,12 +5514,6 @@ static int fg_parse_dt(struct fg_chip *chip)
 			pr_warn("Error reading Jeita thresholds, default values will be used rc:%d\n",
 				rc);
 	}
-	pr_info("%s: jeita threshold %d, %d, %d, %d\n", __func__,
-						chip->dt.jeita_thresholds[JEITA_COLD],
-						chip->dt.jeita_thresholds[JEITA_COOL],
-						chip->dt.jeita_thresholds[JEITA_WARM],
-						chip->dt.jeita_thresholds[JEITA_HOT]);
-
 
 	if (of_property_count_elems_of_size(node,
 		"qcom,battery-thermal-coefficients",
