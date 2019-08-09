@@ -1184,7 +1184,7 @@ config STUNE_ASSIST
 	  If unsure, say N.
 
 config CPUSET_ASSIST
-	bool "CPUSet configuration helper"
+	bool "Cpuset configuration helper"
 	depends on CPUSETS
 	depends on ANDROID
 	help
