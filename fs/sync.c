@@ -176,17 +176,11 @@ SYSCALL_DEFINE1(syncfs, int, fd)
 	struct super_block *sb;
 	int ret;
 
-<<<<<<< HEAD
-=======
 	#ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
 	#endif
-	
-	if (!fsync_enabled)
-		return 0;
 
->>>>>>> 732139c9592e... fs: dynamic fsync 2.3
 	if (!f.file)
 		return -EBADF;
 	sb = f.file->f_path.dentry->d_sb;
@@ -214,17 +208,11 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	struct inode *inode = file->f_mapping->host;
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
 #endif	
 
-	if (!fsync_enabled)
-		return 0;
-
->>>>>>> 732139c9592e... fs: dynamic fsync 2.3
 	if (!file->f_op->fsync)
 		return -EINVAL;
 	if (!datasync && (inode->i_state & I_DIRTY_TIME)) {
@@ -255,17 +243,11 @@ static int do_fsync(unsigned int fd, int datasync)
 {
 	struct fd f = fdget(fd);
 	int ret = -EBADF;
-<<<<<<< HEAD
-=======
 
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
 #endif
-
-	if (!fsync_enabled)
-		return 0;
->>>>>>> 732139c9592e... fs: dynamic fsync 2.3
 
 	if (f.file) {
 		ret = vfs_fsync(f.file, datasync);
@@ -341,17 +323,11 @@ SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 	loff_t endbyte;			/* inclusive */
 	umode_t i_mode;
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_DYNAMIC_FSYNC
 	if (likely(dyn_fsync_active && suspend_active))
 		return 0;
 #endif
 	
-	if (!fsync_enabled)
-		return 0;
-
->>>>>>> 732139c9592e... fs: dynamic fsync 2.3
 	ret = -EINVAL;
 	if (flags & ~VALID_FLAGS)
 		goto out;
