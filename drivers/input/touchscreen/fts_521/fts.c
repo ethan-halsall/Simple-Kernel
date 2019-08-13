@@ -3990,11 +3990,11 @@ static int fts_drm_state_chg_callback(struct notifier_block *nb,
 
 			logError(1, "%s %s: FB_BLANK_POWERDOWN\n", tag,
 				 __func__);
-		ret = fts_disableInterrupt();
-		if (ret < OK)
-			logError(1, "%s fts_disableInterrupt ERROR %08X\n", tag, ret | ERROR_ENABLE_INTER);
-		else
-			logError(1, "%s fts_disableInterrupt\n", tag, ret | ERROR_ENABLE_INTER);
+			ret = fts_disableInterrupt();
+			if (ret < OK)
+				logError(1, "%s fts_disableInterrupt ERROR %08X\n", tag, ret | ERROR_ENABLE_INTER);
+			else
+				logError(1, "%s fts_disableInterrupt\n", tag, ret | ERROR_ENABLE_INTER);
 
 			queue_work(info->event_wq, &info->suspend_work);
 		} else if (val == DRM_EVENT_BLANK && blank == DRM_BLANK_UNBLANK) {
