@@ -459,8 +459,8 @@ static struct icnss_priv {
 	uint32_t fw_error_fatal_irq;
 	uint32_t fw_early_crash_irq;
 	struct completion unblock_shutdown;
-	bool is_ssr;
 	struct thermal_cooling_device *tcdev;
+	bool is_ssr;
 	unsigned long curr_thermal_state;
 	unsigned long max_thermal_state;
 } *penv;
@@ -2359,16 +2359,20 @@ static int icnss_pd_restart_complete(struct icnss_priv *priv)
 
 	icnss_hw_power_on(priv);
 
+	icnss_block_shutdown(true);
+
 	ret = priv->ops->reinit(&priv->pdev->dev);
 	if (ret < 0) {
 		icnss_pr_err("Driver reinit failed: %d, state: 0x%lx\n",
 			     ret, priv->state);
 		if (!priv->allow_recursive_recovery)
 			ICNSS_ASSERT(false);
+		icnss_block_shutdown(false);
 		goto out_power_off;
 	}
 
 out:
+	icnss_block_shutdown(false);
 	clear_bit(ICNSS_SHUTDOWN_DONE, &penv->state);
 	return 0;
 
@@ -2473,7 +2477,7 @@ int icnss_thermal_register(struct device *dev, unsigned long max_state)
 		priv->tcdev = thermal_of_cooling_device_register(dev->of_node,
 						"icnss", priv,
 						&icnss_cooling_ops);
-		if (IS_ERR(priv->tcdev)) {
+		if (IS_ERR_OR_NULL(priv->tcdev)) {
 			ret = PTR_ERR(priv->tcdev);
 			icnss_pr_err("Cooling device register failed: %d\n",
 								ret);
@@ -2493,7 +2497,7 @@ void icnss_thermal_unregister(struct device *dev)
 {
 	struct icnss_priv *priv = dev_get_drvdata(dev);
 
-	if (!IS_ERR(priv->tcdev))
+	if (!IS_ERR_OR_NULL(priv->tcdev))
 		thermal_cooling_device_unregister(priv->tcdev);
 
 	priv->tcdev = NULL;
@@ -2506,7 +2510,7 @@ int icnss_get_curr_therm_state(struct device *dev,
 	struct icnss_priv *priv = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (IS_ERR(priv->tcdev)) {
+	if (IS_ERR_OR_NULL(priv->tcdev)) {
 		ret = PTR_ERR(priv->tcdev);
 		icnss_pr_err("Get current thermal state failed: %d\n", ret);
 		return ret;
