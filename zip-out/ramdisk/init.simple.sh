@@ -24,11 +24,8 @@ done;
 # Disable CAF task placement for Big Cores
 echo 0 > /proc/sys/kernel/sched_walt_rotate_big_tasks
 
-# configure governor settings for little cluster
-echo 0 > /sys/devices/system/cpu/cpufreq/policy0/schedutil/pl
-	
-# configure governor settings for big cluster
-echo 0 > /sys/devices/system/cpu/cpufreq/policy4/schedutil/pl
+# Disable sched stats for less overhead
+echo 0 > /proc/sys/kernel/sched_schedstats
 
 # Setup EAS cpusets values for better load balancing
 echo "0-7" > /dev/cpuset/top-app/cpus 
