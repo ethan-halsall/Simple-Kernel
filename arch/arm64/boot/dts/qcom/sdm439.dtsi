@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -356,6 +356,26 @@
 		<          0 0>,
 		<  400000000 1>,
 		<  533333333 3>;
+
+	qcom,speed5-bin-v0-c0 =
+		<          0 0>,
+		<  768000000 1>,
+		<  998400000 1>,
+		< 1171200000 2>,
+		< 1305600000 3>,
+		< 1459200000 5>;
+
+	qcom,speed5-bin-v0-c1=
+		<          0 0>,
+		<  960000000 1>,
+		< 1305600000 1>,
+		< 1497600000 2>,
+		< 1708800000 3>;
+
+	qcom,speed5-bin-v0-cci =
+		<          0 0>,
+		<  400000000 1>,
+		<  533333333 3>;
 };
 
 &clock_gcc {
@@ -682,7 +702,15 @@
 };
 
 &sdhc_1 {
-	qcom,ddr-config = <0x00040868>;
+	/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+	qcom,dll-hsr-list = <0x00076400 0x0 0x0 0x0 0x00040868>;
+
+};
+
+&sdhc_2 {
+	/* DLL HSR settings. Refer go/hsr - <Target> DLL settings */
+	qcom,dll-hsr-list = <0x00076400 0x0 0x0 0x0 0x00040868>;
+
 };
 
 &mdss_mdp {

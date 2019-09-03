@@ -32,6 +32,7 @@
 #include "configfs.h"
 
 #define GSI_RMNET_CTRL_NAME "rmnet_ctrl"
+#define GSI_RMNET_V2X_CTRL_NAME "rmnet_v2x_ctrl"
 #define GSI_MBIM_CTRL_NAME "android_mbim"
 #define GSI_DPL_CTRL_NAME "dpl_ctrl"
 #define ETHER_RMNET_CTRL_NAME "rmnet_ctrl0"
@@ -125,6 +126,7 @@ enum usb_prot_id {
 	USB_PROT_RMNET_IPA,
 	USB_PROT_MBIM_IPA,
 	USB_PROT_DIAG_IPA,
+	USB_PROT_RMNET_V2X_IPA,
 
 	/* non-accelerated */
 	USB_PROT_RMNET_ETHER,
@@ -280,6 +282,8 @@ struct f_gsi {
 	struct gsi_ctrl_port c_port;
 	bool rmnet_dtr_status;
 
+	bool rwake_inprogress;
+
 	/* To test remote wakeup using debugfs */
 	struct timer_list gsi_rw_timer;
 	u8 debugfs_rw_timer_enable;
@@ -337,6 +341,8 @@ static int name_to_prot_id(const char *name)
 		return USB_PROT_MBIM_IPA;
 	if (!strncasecmp(name, "dpl", MAX_INST_NAME_LEN))
 		return USB_PROT_DIAG_IPA;
+	if (!strncasecmp(name, "rmnet.v2x", MAX_INST_NAME_LEN))
+		return USB_PROT_RMNET_V2X_IPA;
 	if (!strncasecmp(name, "rmnet.ether", MAX_INST_NAME_LEN))
 		return USB_PROT_RMNET_ETHER;
 	if (!strncasecmp(name, "dpl.ether", MAX_INST_NAME_LEN))

@@ -463,6 +463,7 @@
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
 					fsmgr_flags = "wait,slotselect,avb";
+					status = "ok";
 				};
 			};
 		};
@@ -2223,6 +2224,7 @@
 		vdd_mss-uV = <RPMH_REGULATOR_LEVEL_TURBO>;
 		qcom,firmware-name = "modem";
 		qcom,pil-self-auth;
+		qcom,sequential-fw-load;
 		qcom,sysmon-id = <0>;
 		qcom,minidump-id = <3>;
 		qcom,ssctl-instance-id = <0x12>;
@@ -2614,6 +2616,7 @@
 		qcom,gpio-force-fatal-error = <&smp2pgpio_wlan_1_in 0 0>;
 		qcom,gpio-early-crash-ind = <&smp2pgpio_wlan_1_in 1 0>;
 		qcom,smmu-s1-bypass;
+		#cooling-cells = <2>;
 	};
 
 	cpubw: qcom,cpubw {
