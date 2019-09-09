@@ -482,7 +482,7 @@ static int lt9611_gpio_configure(struct lt9611 *pdata, bool on)
 			goto error;
 		}
 
-		ret = gpio_direction_output(pdata->reset_gpio, 0);
+		ret = gpio_direction_output(pdata->reset_gpio, 1);
 		if (ret) {
 			pr_err("lt9611 reset gpio direction failed\n");
 			goto reset_error;
