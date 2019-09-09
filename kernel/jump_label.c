@@ -120,9 +120,9 @@ void static_key_slow_inc_cpuslocked(struct static_key *key)
 
 void static_key_slow_inc(struct static_key *key)
 {
-	cpus_read_lock();
+	get_online_cpus();
 	static_key_slow_inc_cpuslocked(key);
-	cpus_read_unlock();
+	put_online_cpus();
 }
 EXPORT_SYMBOL_GPL(static_key_slow_inc);
 
@@ -150,9 +150,9 @@ EXPORT_SYMBOL_GPL(static_key_enable_cpuslocked);
 
 void static_key_enable(struct static_key *key)
 {
-	cpus_read_lock();
+	get_online_cpus();
 	static_key_enable_cpuslocked(key);
-	cpus_read_unlock();
+	put_online_cpus();
 }
 EXPORT_SYMBOL_GPL(static_key_enable);
 
@@ -174,9 +174,9 @@ EXPORT_SYMBOL_GPL(static_key_disable_cpuslocked);
 
 void static_key_disable(struct static_key *key)
 {
-	cpus_read_lock();
+	get_online_cpus();
 	static_key_disable_cpuslocked(key);
-	cpus_read_unlock();
+	put_online_cpus();
 }
 EXPORT_SYMBOL_GPL(static_key_disable);
 
@@ -210,9 +210,9 @@ static void __static_key_slow_dec(struct static_key *key,
 				  unsigned long rate_limit,
 				  struct delayed_work *work)
 {
-	cpus_read_lock();
+	get_online_cpus();
 	__static_key_slow_dec_cpuslocked(key, rate_limit, work);
-	cpus_read_unlock();
+	put_online_cpus();
 }
 
 static void jump_label_update_timeout(struct work_struct *work)
@@ -394,7 +394,7 @@ void __init jump_label_init(void)
 	if (static_key_initialized)
 		return;
 
-	cpus_read_lock();
+	get_online_cpus();
 	jump_label_lock();
 	jump_label_sort_entries(iter_start, iter_stop);
 
@@ -414,7 +414,7 @@ void __init jump_label_init(void)
 	}
 	static_key_initialized = true;
 	jump_label_unlock();
-	cpus_read_unlock();
+	put_online_cpus();
 }
 
 #ifdef CONFIG_MODULES
@@ -652,7 +652,7 @@ jump_label_module_notify(struct notifier_block *self, unsigned long val,
 	struct module *mod = data;
 	int ret = 0;
 
-	cpus_read_lock();
+	get_online_cpus();
 	jump_label_lock();
 
 	switch (val) {
@@ -672,7 +672,7 @@ jump_label_module_notify(struct notifier_block *self, unsigned long val,
 	}
 
 	jump_label_unlock();
-	cpus_read_unlock();
+	put_online_cpus();
 
 	return notifier_from_errno(ret);
 }
