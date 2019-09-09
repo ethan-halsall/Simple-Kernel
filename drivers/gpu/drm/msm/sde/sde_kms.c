@@ -1324,7 +1324,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.get_dst_format = dsi_display_get_dst_format,
 		.enable_event = dsi_conn_enable_event,
 		.cmd_transfer = NULL,
-		.cont_splash_config = NULL,
+		.cont_splash_config = dsi_display_cont_splash_config,
 	};
 	struct msm_display_info info;
 	struct drm_encoder *encoder;
