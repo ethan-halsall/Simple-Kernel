@@ -1885,19 +1885,6 @@ static struct task_struct *pick_highest_pushable_task(struct rq *rq, int cpu)
 	return NULL;
 }
 
-#ifdef CONFIG_SCHED_CORE_ROTATE
-static int rotate_cpu_start;
-static DEFINE_SPINLOCK(rotate_lock);
-static unsigned long avoid_prev_cpu_last;
-
-static struct find_first_cpu_bit_env first_cpu_bit_env = {
-	.avoid_prev_cpu_last = &avoid_prev_cpu_last,
-	.rotate_cpu_start = &rotate_cpu_start,
-	.interval = HZ,
-	.rotate_lock = &rotate_lock,
-};
-#endif
-
 static DEFINE_PER_CPU(cpumask_var_t, local_cpu_mask);
 
 static int rt_energy_aware_wake_cpu(struct task_struct *task)

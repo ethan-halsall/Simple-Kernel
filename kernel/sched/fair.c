@@ -7659,7 +7659,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 		!(p->state == TASK_RUNNING && !idle_cpu(most_spare_cap_cpu)))
 		target_cpu = most_spare_cap_cpu;
 
-	if (target_cpu == -1 && isolated_candidate != -1)
+	if (target_cpu == -1 && isolated_candidate != -1) {
 		target_cpu = isolated_candidate;
 	}
 
