@@ -115,3 +115,4 @@ checks, you may define __CHECK_ENDIAN__::
         make C=2 CF="-D__CHECK_ENDIAN__"
 
 These checks are disabled by default as they generate a host of warnings.
+build system passes -Wbitwise to sparse automatically.
