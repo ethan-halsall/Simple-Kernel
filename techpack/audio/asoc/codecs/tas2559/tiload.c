@@ -38,9 +38,6 @@
 
 #include "tiload.h"
 
-/* enable debug prints in the driver */
-/*#define DEBUG*/
-
 static struct cdev *tiload_cdev;
 static int tiload_major; /* Dynamic allocation of Mjr No. */
 static int tiload_opened; /* Dynamic allocation of Mjr No. */
@@ -50,7 +47,6 @@ static unsigned int magic_num;
 
 static char gPage;
 static char gBook;
-/******************************** Debug section *****************************/
 
 
 /*----------------------------------------------------------------------------
@@ -188,10 +184,9 @@ static ssize_t tiload_write(struct file *filp, const char __user *buf,
 	}
 
 	wr_data = kmalloc(MAX_LENGTH + 1, GFP_KERNEL | GFP_DMA);
-	if(wr_data == NULL) {
-		dev_err(pTAS2559->dev, "kmalloc fail \n");
+	if (wr_data == NULL)
 		return -EINVAL;
-	}
+
 	pData = wr_data;
 	/* copy buffer from user space  */
 	size = copy_from_user(wr_data, buf, count);
