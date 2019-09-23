@@ -7883,7 +7883,6 @@ int sched_cpu_activate(unsigned int cpu)
 	}
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
-	update_max_interval();
 	walt_update_min_max_capacity();
 
 	return 0;
