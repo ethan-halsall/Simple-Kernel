@@ -1,0 +1,15 @@
+ on property:sys.boot_completed=1
+ 
+    # Restart IRQ balancer after boot complete
+    stop vendor.msm_irqbalance;
+    start vendor.msm_irqbalance;
+
+    # Start simple post boot script
+    start simple-post-boot
+    exec u:r:magisk:s0 root root -- /vendor/bin/init.simple.sh
+    
+    service simple-post-boot /vendor/bin/init.simple.sh
+        class late_start
+        user root
+        enabled
+        oneshot  
