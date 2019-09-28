@@ -12,7 +12,7 @@ do.cleanuponabort=0
 device.name1=beryllium
 device.name2=dipper
 device.name3=polaris
-supported.versions=9,9.0
+supported.versions=9,9.0,10,10.0
 '} # end properties
 
 # shell variables
