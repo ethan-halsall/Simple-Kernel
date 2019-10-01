@@ -511,8 +511,10 @@ static int mhi_write(int id, unsigned char *buf, int len, int ctxt)
 
 	err = mhi_buf_tbl_add(&diag_mhi[id], TYPE_MHI_WRITE_CH, buf,
 			      len);
-	if (err)
+	if (err) {
+		spin_unlock_irqrestore(&ch->lock, flags);
 		goto fail;
+	}
 
 	spin_lock_irqsave(&ch->lock, flags);
 	err = mhi_queue_xfer(ch->hdl, buf, len, mhi_flags);
