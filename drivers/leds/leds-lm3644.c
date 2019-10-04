@@ -1123,7 +1123,7 @@ err_free_torch_classdev:
 	led_classdev_unregister(&chip->cdev_torch);
 
 err_del_cdev:
-	if (&chip->cdev)
+	if (&chip->cdev != NULL)
 		cdev_del(&(chip->cdev));
 err_destroy_device:
 	if (chip->chr_dev)
@@ -1175,7 +1175,7 @@ static int lm3644_remove(struct i2c_client *client)
 {
 	struct lm3644_chip_data *chip = i2c_get_clientdata(client);
 
-	if (&chip->cdev)
+	if (&chip->cdev != NULL)
 		cdev_del(&(chip->cdev));
 
 	if (chip->chr_dev)
