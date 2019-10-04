@@ -152,7 +152,7 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int is_data_available_for_read(struct nqx_dev *nqx_dev)
+static int __maybe_unused is_data_available_for_read(struct nqx_dev *nqx_dev)
 {
 	int ret;
 
