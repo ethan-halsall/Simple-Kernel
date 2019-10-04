@@ -1434,7 +1434,7 @@ static int idtp9220_probe(struct i2c_client *client,
 			idtp9220_request_adapter_retry_work);
 
 #ifdef CONFIG_DRM
-	if (&di->wireless_fb_notif) {
+	if (&di->wireless_fb_notif != NULL) {
 		di->wireless_fb_notif.notifier_call = wireless_fb_notifier_cb;
 		rc = drm_register_client(&di->wireless_fb_notif);
 		if (rc < 0) {
