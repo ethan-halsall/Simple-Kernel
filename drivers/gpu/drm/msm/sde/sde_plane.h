@@ -96,6 +96,7 @@ struct sde_plane_rot_state {
 #define SDE_PLANE_DIRTY_PERF	0x8
 #define SDE_PLANE_DIRTY_FB_TRANSLATION_MODE	0x10
 #define SDE_PLANE_DIRTY_ALL	0xFFFFFFFF
+#define SDE_PLANE_DIRTY_QOS     0x200
 
 /**
  * enum sde_plane_sclcheck_state - User scaler data status
