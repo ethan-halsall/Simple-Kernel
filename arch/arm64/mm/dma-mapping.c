@@ -2253,12 +2253,7 @@ void arm_iommu_detach_device(struct device *dev)
 	iommu_domain_get_attr(mapping->domain, DOMAIN_ATTR_S1_BYPASS,
 					&s1_bypass);
 
-	/*
-	 * ION defers dma_unmap calls. Ensure they have all completed prior to
-	 * setting dma_ops to NULL.
-	 */
-	if (msm_dma_unmap_all_for_dev(dev))
-		dev_warn(dev, "IOMMU detach with outstanding mappings\n");
+	msm_dma_unmap_all_for_dev(dev);
 
 	iommu_detach_group(mapping->domain, dev->iommu_group);
 	dev->archdata.mapping = NULL;
