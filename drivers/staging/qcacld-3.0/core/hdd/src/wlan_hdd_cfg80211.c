@@ -112,6 +112,7 @@
 #include "wlan_hdd_object_manager.h"
 #include "wlan_hdd_coex_config.h"
 #include "wlan_hdd_hw_capability.h"
+#include "wlan_hdd_bcn_recv.h"
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -1439,6 +1440,9 @@ static const struct nl80211_vendor_cmd_info wlan_hdd_cfg80211_vendor_events[] = 
 		.vendor_id = QCA_NL80211_VENDOR_ID,
 		.subcmd = QCA_NL80211_VENDOR_SUBCMD_THROUGHPUT_CHANGE_EVENT,
 	},
+
+	BCN_RECV_FEATURE_VENDOR_EVENTS
+
 #ifdef WLAN_UMAC_CONVERGENCE
 	COMMON_VENDOR_EVENTS
 #endif
@@ -2740,7 +2744,6 @@ out:
 			return cfg80211_vendor_cmd_reply(temp_skbuff);
 	}
 	qdf_atomic_set(&adapter->session.ap.acs_in_progress, 0);
-	wlan_hdd_undo_acs(adapter);
 	clear_bit(ACS_IN_PROGRESS, &hdd_ctx->g_event_flags);
 
 	return ret;
@@ -2784,21 +2787,8 @@ static int wlan_hdd_cfg80211_do_acs(struct wiphy *wiphy,
 
 void wlan_hdd_undo_acs(struct hdd_adapter *adapter)
 {
-	if (adapter == NULL)
-		return;
-	if (adapter->session.ap.sap_config.acs_cfg.ch_list) {
-		hdd_debug("Clear acs cfg channel list");
-		qdf_mem_free(adapter->session.ap.sap_config.acs_cfg.ch_list);
-		adapter->session.ap.sap_config.acs_cfg.ch_list = NULL;
-	}
-	adapter->session.ap.sap_config.acs_cfg.ch_list_count = 0;
-	if (adapter->session.ap.sap_config.acs_cfg.master_ch_list) {
-		hdd_debug("Clear acs cfg channel list");
-		qdf_mem_free(
-			adapter->session.ap.sap_config.acs_cfg.master_ch_list);
-		adapter->session.ap.sap_config.acs_cfg.master_ch_list = NULL;
-	}
-	adapter->session.ap.sap_config.acs_cfg.master_ch_list_count = 0;
+	sap_undo_acs(WLAN_HDD_GET_SAP_CTX_PTR(adapter),
+		     &adapter->session.ap.sap_config);
 }
 
 /**
@@ -15023,6 +15013,9 @@ const struct wiphy_vendor_command hdd_wiphy_vendor_commands[] = {
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = wlan_hdd_cfg80211_get_sar_power_limits
 	},
+
+	BCN_RECV_FEATURE_VENDOR_COMMANDS
+
 	{
 		.info.vendor_id = QCA_NL80211_VENDOR_ID,
 		.info.subcmd = QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS,
@@ -17462,24 +17455,14 @@ static int wlan_hdd_cfg80211_set_default_key(struct wiphy *wiphy,
 }
 
 void wlan_hdd_cfg80211_unlink_bss(struct hdd_adapter *adapter,
-				  tSirMacAddr bssid)
+				  tSirMacAddr bssid, uint8_t *ssid,
+				  uint8_t ssid_len)
 {
 	struct net_device *dev = adapter->dev;
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct wiphy *wiphy = wdev->wiphy;
-	struct cfg80211_bss *bss = NULL;
 
-	bss = hdd_cfg80211_get_bss(wiphy, NULL, bssid,
-			NULL, 0);
-	if (!bss) {
-		hdd_err("BSS not present");
-	} else {
-		hdd_debug("cfg80211_unlink_bss called for BSSID "
-			MAC_ADDRESS_STR, MAC_ADDR_ARRAY(bssid));
-		cfg80211_unlink_bss(wiphy, bss);
-		/* cfg80211_get_bss get bss with ref count so release it */
-		cfg80211_put_bss(wiphy, bss);
-	}
+	__wlan_cfg80211_unlink_bss_list(wiphy, bssid, ssid, ssid_len);
 }
 
 #ifdef WLAN_ENABLE_AGEIE_ON_SCAN_RESULTS
@@ -17643,11 +17626,12 @@ wlan_hdd_inform_bss_frame(struct hdd_adapter *adapter,
 	for (i = 0; i < WLAN_MGMT_TXRX_HOST_MAX_ANTENNA; i++)
 		bss_data.per_chain_snr[i] = WLAN_INVALID_PER_CHAIN_RSSI;
 
-	hdd_debug("BSSID: " MAC_ADDRESS_STR " Channel:%d RSSI:%d TSF %u seq %d",
+	hdd_debug("BSSID: " MAC_ADDRESS_STR " Channel:%d RSSI:%d TSF %u seq %d is_prob_resp %d",
 		  MAC_ADDR_ARRAY(bss_data.mgmt->bssid),
 		  bss_data.chan->center_freq, (int)(bss_data.rssi / 100),
 		  bss_desc->timeStamp[0], ((bss_desc->seq_ctrl.seqNumHi <<
-		  HIGH_SEQ_NUM_OFFSET) | bss_desc->seq_ctrl.seqNumLo));
+		  HIGH_SEQ_NUM_OFFSET) | bss_desc->seq_ctrl.seqNumLo),
+		  bss_desc->fProbeRsp);
 
 	bss_status = wlan_cfg80211_inform_bss_frame_data(wiphy, &bss_data);
 	hdd_ctx->beacon_probe_rsp_cnt_per_scan++;

@@ -4747,7 +4747,7 @@ QDF_STATUS csr_roam_issue_disassociate_sta_cmd(tpAniSirGlobal pMac,
 				sizeof(pCommand->u.roamCmd.peerMac));
 		pCommand->u.roamCmd.reason =
 			(tSirMacReasonCodes)p_del_sta_params->reason_code;
-		status = csr_queue_sme_command(pMac, pCommand, false);
+		status = csr_queue_sme_command(pMac, pCommand, true);
 		if (!QDF_IS_STATUS_SUCCESS(status))
 			sme_err("fail to send message status: %d", status);
 	} while (0);
@@ -4786,7 +4786,7 @@ QDF_STATUS csr_roam_issue_deauth_sta_cmd(tpAniSirGlobal pMac,
 			     sizeof(tSirMacAddr));
 		pCommand->u.roamCmd.reason =
 			(tSirMacReasonCodes)pDelStaParams->reason_code;
-		status = csr_queue_sme_command(pMac, pCommand, false);
+		status = csr_queue_sme_command(pMac, pCommand, true);
 		if (!QDF_IS_STATUS_SUCCESS(status))
 			sme_err("fail to send message status: %d", status);
 	} while (0);
@@ -20312,6 +20312,12 @@ csr_roam_offload_scan(tpAniSirGlobal mac_ctx, uint8_t session_id,
 	if (NULL == session) {
 		QDF_TRACE(QDF_MODULE_ID_SME, QDF_TRACE_LEVEL_ERROR,
 			 "session is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!csr_is_conn_state_connected(mac_ctx, session_id) &&
+	    command == ROAM_SCAN_OFFLOAD_UPDATE_CFG) {
+		sme_debug("Session not in connected state, RSO not sent");
 		return QDF_STATUS_E_FAILURE;
 	}
 

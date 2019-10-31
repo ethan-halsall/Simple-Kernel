@@ -2795,6 +2795,7 @@ static void hdd_update_ipa_component_config(struct hdd_context *hdd_ctx)
 	ipa_cfg.ipa_bw_high = cfg->IpaHighBandwidthMbps;
 	ipa_cfg.ipa_bw_medium = cfg->IpaMediumBandwidthMbps;
 	ipa_cfg.ipa_bw_low = cfg->IpaLowBandwidthMbps;
+	ipa_cfg.ipa_force_voting = cfg->IpaForceVoting;
 
 	ucfg_ipa_update_config(&ipa_cfg);
 }
@@ -4433,7 +4434,8 @@ int hdd_vdev_create(struct hdd_adapter *adapter,
 	status = qdf_event_reset(&adapter->qdf_session_open_event);
 	if (QDF_STATUS_SUCCESS != status) {
 		hdd_err("failed to reinit session open event");
-		return -EINVAL;
+		errno = qdf_status_to_os_return(status);
+		goto objmgr_vdev_destroy_procedure;
 	}
 	errno = hdd_set_sme_session_param(adapter, &sme_session_params,
 					  callback, ctx);
@@ -4453,17 +4455,14 @@ int hdd_vdev_create(struct hdd_adapter *adapter,
 	status = qdf_wait_for_event_completion(&adapter->qdf_session_open_event,
 			SME_CMD_VDEV_CREATE_DELETE_TIMEOUT);
 	if (QDF_STATUS_SUCCESS != status) {
-		if (adapter->qdf_session_open_event.force_set) {
+		if (adapter->qdf_session_open_event.force_set)
 			/*
 			 * SSR/PDR has caused shutdown, which has forcefully
-			 * set the event. Return without the closing session.
+			 * set the event.
 			 */
-			adapter->session_id = HDD_SESSION_ID_INVALID;
 			hdd_err("Session open event forcefully set");
-			return -EINVAL;
-		}
 
-		if (QDF_STATUS_E_TIMEOUT == status)
+		else if (QDF_STATUS_E_TIMEOUT == status)
 			hdd_err("Session failed to open within timeout period");
 		else
 			hdd_err("Failed to wait for session open event(status-%d)",
@@ -5725,14 +5724,21 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 					mac_handle,
 					adapter->session_id,
 					eCSR_DISCONNECT_REASON_IBSS_LEAVE);
-			else if (QDF_STA_MODE == adapter->device_mode)
-				 wlan_hdd_disconnect(adapter,
+			else if (QDF_STA_MODE == adapter->device_mode) {
+				rc = wlan_hdd_disconnect(
+						adapter,
 						eCSR_DISCONNECT_REASON_DEAUTH);
-			else
+				if (rc != 0 && ucfg_ipa_is_enabled()) {
+					hdd_err("STA disconnect failed");
+					ucfg_ipa_uc_cleanup_sta(hdd_ctx->pdev,
+								adapter->dev);
+				}
+			} else {
 				qdf_ret_status = sme_roam_disconnect(
 					mac_handle,
 					adapter->session_id,
 					eCSR_DISCONNECT_REASON_UNSPECIFIED);
+			}
 			/* success implies disconnect command got
 			 * queued up successfully
 			 */
@@ -5866,6 +5872,10 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 			QDF_STATUS status;
 			QDF_STATUS qdf_status;
 
+			/* Set the stop_bss_in_progress flag */
+			wlansap_set_stop_bss_inprogress(
+				WLAN_HDD_GET_SAP_CTX_PTR(adapter), true);
+
 			/* Stop Bss. */
 			status = wlansap_stop_bss(
 					WLAN_HDD_GET_SAP_CTX_PTR(adapter));
@@ -5888,6 +5898,8 @@ QDF_STATUS hdd_stop_adapter_ext(struct hdd_context *hdd_ctx,
 				hdd_err("failure in wlansap_stop_bss");
 			}
 			clear_bit(SOFTAP_BSS_STARTED, &adapter->event_flags);
+			wlansap_set_stop_bss_inprogress(
+				WLAN_HDD_GET_SAP_CTX_PTR(adapter), false);
 			policy_mgr_decr_session_set_pcl(hdd_ctx->psoc,
 						adapter->device_mode,
 						adapter->session_id);
@@ -6026,7 +6038,6 @@ static void hdd_reset_scan_operation(struct hdd_context *hdd_ctx,
 		break;
 	case QDF_SAP_MODE:
 		qdf_atomic_set(&adapter->session.ap.acs_in_progress, 0);
-		wlan_hdd_undo_acs(adapter);
 		break;
 	default:
 		break;
@@ -8912,6 +8923,32 @@ int hdd_update_acs_timer_reason(struct hdd_adapter *adapter, uint8_t reason)
 
 #if defined(FEATURE_WLAN_CH_AVOID)
 /**
+ * hdd_store_sap_restart_channel() - store sap restart channel
+ * @restart_chan: restart channel
+ * @restart_chan_store: pointer to restart channel store
+ *
+ * The function will store new sap restart channel.
+ *
+ * Return - none
+ */
+static void
+hdd_store_sap_restart_channel(uint8_t restart_chan, uint8_t *restart_chan_store)
+{
+	uint8_t i;
+
+	for (i = 0; i < SAP_MAX_NUM_SESSION; i++) {
+		if (*(restart_chan_store + i) == restart_chan)
+			return;
+
+		if (*(restart_chan_store + i))
+			continue;
+
+		*(restart_chan_store + i) = restart_chan;
+		return;
+	}
+}
+
+/**
  * hdd_unsafe_channel_restart_sap() - restart sap if sap is on unsafe channel
  * @hdd_ctx: hdd context pointer
  *
@@ -8926,6 +8963,7 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 	struct hdd_adapter *adapter;
 	uint32_t i;
 	bool found = false;
+	uint8_t restart_chan_store[SAP_MAX_NUM_SESSION] = {0};
 	uint8_t restart_chan;
 
 	hdd_for_each_adapter(hdd_ctxt, adapter) {
@@ -8959,6 +8997,9 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 			}
 		}
 		if (!found) {
+			hdd_store_sap_restart_channel(
+				adapter->session.ap.operating_channel,
+				restart_chan_store);
 			hdd_debug("ch:%d is safe. no need to change channel",
 				  adapter->session.ap.operating_channel);
 			continue;
@@ -8969,10 +9010,27 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 			hdd_update_acs_timer_reason(adapter,
 				QCA_WLAN_VENDOR_ACS_SELECT_REASON_LTE_COEX);
 			continue;
-		} else
+		}
+
+		restart_chan = 0;
+		for (i = 0; i < SAP_MAX_NUM_SESSION; i++) {
+			if (!restart_chan_store[i])
+				continue;
+
+			if (policy_mgr_is_force_scc(hdd_ctxt->psoc) &&
+			    WLAN_REG_IS_SAME_BAND_CHANNELS(
+							restart_chan_store[i],
+							adapter->session.ap.
+							operating_channel)) {
+				restart_chan = restart_chan_store[i];
+				break;
+			}
+		}
+		if (!restart_chan)
 			restart_chan =
 				wlansap_get_safe_channel_from_pcl_and_acs_range(
 					WLAN_HDD_GET_SAP_CTX_PTR(adapter));
+
 		if (!restart_chan) {
 			hdd_err("fail to restart SAP");
 		} else {
@@ -8995,6 +9053,9 @@ void hdd_unsafe_channel_restart_sap(struct hdd_context *hdd_ctxt)
 						CSA_REASON_UNSAFE_CHANNEL);
 				hdd_switch_sap_channel(adapter, restart_chan,
 						       true);
+				hdd_store_sap_restart_channel(
+							restart_chan,
+							restart_chan_store);
 			} else {
 				return;
 			}
@@ -9513,6 +9574,9 @@ static int hdd_mode_change_psoc_idle_restart(struct device *dev)
 {
 	struct hdd_context *hdd_ctx = cds_get_context(QDF_MODULE_ID_HDD);
 
+	if (!hdd_ctx)
+		return -EINVAL;
+
 	return hdd_wlan_start_modules(hdd_ctx, false);
 }
 
@@ -9554,6 +9618,8 @@ int hdd_psoc_idle_restart(struct device *dev)
 
 int hdd_trigger_psoc_idle_restart(struct hdd_context *hdd_ctx)
 {
+	int ret;
+
 	QDF_BUG(rtnl_is_locked());
 
 	mutex_lock(&hdd_ctx->iface_change_lock);
@@ -9565,8 +9631,8 @@ int hdd_trigger_psoc_idle_restart(struct hdd_context *hdd_ctx)
 	}
 
 	mutex_unlock(&hdd_ctx->iface_change_lock);
-	pld_idle_restart(hdd_ctx->parent_dev, hdd_psoc_idle_restart);
-	return 0;
+	ret = pld_idle_restart(hdd_ctx->parent_dev, hdd_psoc_idle_restart);
+	return ret;
 }
 
 int hdd_psoc_idle_shutdown(struct device *dev)
@@ -14654,6 +14720,10 @@ bool hdd_is_connection_in_progress(uint8_t *session_id,
 			}
 			if (hdd_ctx->connection_in_progress) {
 				hdd_debug("AP/GO: connection is in progress");
+				if (session_id && reason) {
+					*reason = SAP_CONNECTION_IN_PROGRESS;
+					*session_id = adapter->session_id;
+				}
 				return true;
 			}
 		}
@@ -15058,7 +15128,7 @@ void hdd_stop_driver_ops_timer(void)
  *
  * Return: None
  */
-void hdd_drv_ops_inactivity_handler(void)
+void hdd_drv_ops_inactivity_handler(void *context)
 {
 	hdd_err("WLAN_BUG_RCA %s: %d Sec timer expired while in .%s",
 		__func__, HDD_OPS_INACTIVITY_TIMEOUT/1000, drv_ops_string);

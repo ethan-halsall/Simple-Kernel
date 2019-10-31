@@ -979,6 +979,12 @@ QDF_STATUS wlan_ipa_suspend(struct wlan_ipa_priv *ipa_ctx)
 	ipa_ctx->suspended = true;
 	qdf_spin_unlock_bh(&ipa_ctx->pm_lock);
 
+	if (ipa_ctx->config->ipa_force_voting &&
+	    !ipa_ctx->ipa_pipes_down)
+		wlan_ipa_set_perf_level(ipa_ctx,
+					ipa_ctx->config->bus_bw_high,
+					ipa_ctx->config->bus_bw_high);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -1692,9 +1698,9 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 			wlan_ipa_uc_offload_enable_disable(ipa_ctx,
 				SIR_STA_RX_DATA_OFFLOAD, session_id, false);
 			qdf_mutex_acquire(&ipa_ctx->event_lock);
-			ipa_ctx->vdev_to_iface[session_id] =
-				WLAN_IPA_MAX_SESSION;
 		}
+
+		ipa_ctx->vdev_to_iface[session_id] = WLAN_IPA_MAX_SESSION;
 
 		for (i = 0; i < WLAN_IPA_MAX_IFACE; i++) {
 			iface_ctx = &ipa_ctx->iface_context[i];
@@ -2976,6 +2982,27 @@ static QDF_STATUS wlan_ipa_uc_send_evt(qdf_netdev_t net_dev,
 	ipa_ctx->stats.num_send_msg++;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+void wlan_ipa_uc_cleanup_sta(struct wlan_ipa_priv *ipa_ctx,
+			     qdf_netdev_t net_dev)
+{
+	struct wlan_ipa_iface_context *iface_ctx;
+	int i;
+
+	ipa_debug("enter");
+
+	for (i = 0; i < WLAN_IPA_MAX_IFACE; i++) {
+		iface_ctx = &ipa_ctx->iface_context[i];
+		if (iface_ctx && iface_ctx->device_mode == QDF_STA_MODE &&
+		    iface_ctx->dev == net_dev && iface_ctx->tl_context) {
+			wlan_ipa_uc_send_evt(net_dev, QDF_IPA_STA_DISCONNECT,
+					     net_dev->dev_addr);
+			wlan_ipa_cleanup_iface(iface_ctx);
+		}
+	}
+
+	ipa_debug("exit");
 }
 
 QDF_STATUS wlan_ipa_uc_disconnect_ap(struct wlan_ipa_priv *ipa_ctx,

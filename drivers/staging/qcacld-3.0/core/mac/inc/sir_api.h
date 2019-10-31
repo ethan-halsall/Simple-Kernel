@@ -214,6 +214,24 @@ struct wlan_mlme_chain_cfg {
 	uint8_t max_rx_chains_5g;
 };
 
+/**
+ * struct wlan_beacon_report - Beacon info to be send to userspace
+ * @ssid: ssid present in beacon
+ * @bssid: bssid present in beacon
+ * @frequency: channel frequency in MHz
+ * @beacon_interval: Interval between two consecutive beacons
+ * @time_stamp: time stamp at which beacon received from AP
+ * @boot_time: Boot time when beacon received
+ */
+struct wlan_beacon_report {
+	struct wlan_ssid ssid;
+	struct qdf_mac_addr bssid;
+	uint32_t frequency;
+	uint16_t beacon_interval;
+	qdf_time_t time_stamp;
+	qdf_time_t boot_time;
+};
+
 /* / Result codes Firmware return to Host SW */
 typedef enum eSirResultCodes {
 	eSIR_SME_SUCCESS,
@@ -7012,6 +7030,7 @@ struct sme_rcpi_req {
  * @REASSOC_IN_PROGRESS: reassociation is in progress
  * @EAPOL_IN_PROGRESS: STA/P2P-CLI is in middle of EAPOL/WPS exchange
  * @SAP_EAPOL_IN_PROGRESS: SAP/P2P-GO is in middle of EAPOL/WPS exchange
+ * @SAP_CONNECTION_IN_PROGRESS: SAP/P2P-GO is in middle of connection.
  */
 enum scan_reject_states {
 	SCAN_REJECT_DEFAULT = 0,
@@ -7019,6 +7038,7 @@ enum scan_reject_states {
 	REASSOC_IN_PROGRESS,
 	EAPOL_IN_PROGRESS,
 	SAP_EAPOL_IN_PROGRESS,
+	SAP_CONNECTION_IN_PROGRESS,
 };
 
 /**
