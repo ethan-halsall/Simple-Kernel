@@ -378,6 +378,7 @@
 	qcom,fcc-low-temp-delta = <2970000>;
 	qcom,fcc-hot-temp-delta = <1650000>;
 	qcom,fcc-cool-temp-delta = <2310000>;
+	google,usb-port-tz-name = "xo_therm";
 	qcom,auto-recharge-soc;
 	qcom,sw-jeita-enable;
 	qcom,dynamic-fv-enable;
