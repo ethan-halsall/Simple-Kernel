@@ -378,7 +378,7 @@
 	qcom,fcc-low-temp-delta = <2970000>;
 	qcom,fcc-hot-temp-delta = <1650000>;
 	qcom,fcc-cool-temp-delta = <2310000>;
-	google,usb-port-tz-name = "xo_therm";
+	google,usb-port-tz-name = "xo-therm-adc";
 	qcom,auto-recharge-soc;
 	qcom,sw-jeita-enable;
 	qcom,dynamic-fv-enable;
@@ -930,7 +930,7 @@
 		};
 	};
 
-	xo_therm {
+	xo-therm-adc {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4c>;
