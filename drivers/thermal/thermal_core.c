@@ -82,7 +82,7 @@ struct screen_monitor {
 struct screen_monitor sm;
 #endif
 
-static atomic_t switch_mode = ATOMIC_INIT(-1);
+static atomic_t switch_mode = ATOMIC_INIT(10);
 static atomic_t temp_state = ATOMIC_INIT(0);
 static char boost_buf[128];
 
@@ -2704,36 +2704,38 @@ static ssize_t
 thermal_sconfig_store(struct device *dev,
 				      struct device_attribute *attr, const char *buf, size_t len)
 {
-	int val = -1;
+	int rc;
+	int val;
 
-	val = simple_strtol(buf, NULL, 10);
+	rc = kstrtoint(buf, 10, &val);
 
 	atomic_set(&switch_mode, val);
 
-	return len;
+	return rc;
 }
 
 static DEVICE_ATTR(sconfig, 0664,
 		   thermal_sconfig_show, thermal_sconfig_store);
 
 static ssize_t
-thermal_boost_show(struct device *dev,
+boost_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
 	return snprintf(buf, PAGE_SIZE, boost_buf);
 }
 
 static ssize_t
-thermal_boost_store(struct device *dev,
+boost_store(struct device *dev,
 				      struct device_attribute *attr, const char *buf, size_t len)
 {
 	int ret;
+
 	ret = snprintf(boost_buf, sizeof(boost_buf), buf);
 	return len;
 }
 
 static DEVICE_ATTR(boost, 0644,
-		   thermal_boost_show, thermal_boost_store);
+		   boost_show, boost_store);
 
 static ssize_t
 thermal_temp_state_show(struct device *dev,
@@ -2746,13 +2748,14 @@ static ssize_t
 thermal_temp_state_store(struct device *dev,
 				      struct device_attribute *attr, const char *buf, size_t len)
 {
-	int val = -1;
+	int rc;
+	int val;
 
-	val = simple_strtol(buf, NULL, 10);
+	rc = kstrtoint(buf, 10, &val);
 
 	atomic_set(&temp_state, val);
 
-	return len;
+	return rc;
 }
 
 static DEVICE_ATTR(temp_state, 0664,
