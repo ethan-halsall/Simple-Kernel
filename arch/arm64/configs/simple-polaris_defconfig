@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.9.198 Kernel Configuration
+# Linux/arm64 4.9.202 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -582,8 +582,10 @@ CONFIG_BINFMT_SCRIPT=y
 # CONFIG_BINFMT_MISC is not set
 CONFIG_COREDUMP=y
 CONFIG_COMPAT=y
-CONFIG_COMPAT_VDSO=y
+CONFIG_KUSER_HELPERS=y
 CONFIG_KEYS_COMPAT=y
+CONFIG_COMPAT_VDSO=y
+CONFIG_CROSS_COMPILE_ARM32=""
 
 #
 # Power management options
@@ -3346,6 +3348,7 @@ CONFIG_HID_PLANTRONICS=y
 CONFIG_HID_SONY=y
 CONFIG_SONY_FF=y
 # CONFIG_HID_SPEEDLINK is not set
+# CONFIG_HID_STEAM is not set
 # CONFIG_HID_STEELSERIES is not set
 # CONFIG_HID_SUNPLUS is not set
 # CONFIG_HID_RMI is not set
