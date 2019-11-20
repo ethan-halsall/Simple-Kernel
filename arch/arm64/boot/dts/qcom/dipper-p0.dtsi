@@ -850,11 +850,6 @@
 				cooling-device =
 					<&CPU7 18 18>;
 			};
-			mnh_thermal {
-				trip = <&low_vbat>;
-				cooling-device =
-					<&mnh_thermal 3 3>;
-			};
 		};
 	};
 	soc {
