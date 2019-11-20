@@ -629,6 +629,13 @@
 			input-disable; /* prevent GPIO from being set to DIO */
 		};
 	};
+	usbc_therm_gpio {
+		usbc_therm_gpiocfg: usbc_therm_gpiocfg {
+			pins = "gpio11";
+			function="analog";
+			bias-high-impedance;
+		};
+	};
 };
 
 &tlmm {
