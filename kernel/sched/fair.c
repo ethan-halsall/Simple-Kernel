@@ -10490,7 +10490,9 @@ no_move:
 				busiest->active_balance = 1;
 				busiest->push_cpu = this_cpu;
 				active_balance = 1;
+#ifdef CONFIG_SCHED_WALT
 				mark_reserved(this_cpu);
+#endif
 			}
 			raw_spin_unlock_irqrestore(&busiest->lock, flags);
 
@@ -12229,8 +12231,10 @@ static void walt_check_for_rotation(struct rq *src_rq)
 		get_task_struct(src_rq->curr);
 		get_task_struct(dst_rq->curr);
 
+#ifdef CONFIG_SCHED_WALT
 		mark_reserved(src_cpu);
 		mark_reserved(dst_cpu);
+#endif
 		wr = &per_cpu(walt_rotate_works, src_cpu);
 
 		wr->src_task = src_rq->curr;
@@ -12272,7 +12276,9 @@ void check_for_migration(struct rq *rq, struct task_struct *p)
 		if (capacity_orig_of(new_cpu) > capacity_orig_of(cpu)) {
 			active_balance = kick_active_balance(rq, p, new_cpu);
 			if (active_balance) {
+#ifdef CONFIG_SCHED_WALT
 				mark_reserved(new_cpu);
+#endif
 				raw_spin_unlock(&migration_lock);
 				stop_one_cpu_nowait(cpu,
 					active_load_balance_cpu_stop, rq,
