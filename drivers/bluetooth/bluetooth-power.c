@@ -462,7 +462,7 @@ static int bt_dt_parse_vreg_info(struct device *dev,
 static int bt_dt_parse_clk_info(struct device *dev,
 		struct bt_power_clk_data **clk_data)
 {
-	int ret = -EINVAL;
+	int ret = 0;
 	struct bt_power_clk_data *clk = NULL;
 	struct device_node *np = dev->of_node;
 
@@ -499,7 +499,7 @@ static int bt_dt_parse_clk_info(struct device *dev,
 
 		*clk_data = clk;
 	} else {
-		BT_PWR_ERR("clocks is not provided in device tree");
+		BT_PWR_INFO("clocks is not provided in device tree");
 	}
 
 err:
@@ -582,7 +582,7 @@ static int bt_power_populate_dt_pinfo(struct platform_device *pdev)
 			of_get_named_gpio(pdev->dev.of_node,
 						"qca,bt-reset-gpio", 0);
 		if (bt_power_pdata->bt_gpio_sys_rst < 0)
-			BT_PWR_ERR("bt-reset-gpio not provided in device tree");
+			BT_PWR_INFO("bt-reset-gpio not provided in devicetree");
 
 		rc = bt_dt_parse_clk_info(&pdev->dev,
 					&bt_power_pdata->bt_chip_clk);
