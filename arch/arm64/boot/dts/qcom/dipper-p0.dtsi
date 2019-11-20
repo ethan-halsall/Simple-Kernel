@@ -697,7 +697,7 @@
 	};
 
 	chan@4d {
-		label = "cam_therm0";
+		label = "sdm_therm";
 		reg = <0x4d>;
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
@@ -708,7 +708,7 @@
 	};
 
 	chan@4e {
-		label = "cam_therm1";
+		label = "quiet_therm";
 		reg = <0x4e>;
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
@@ -719,7 +719,7 @@
 	};
 
 	chan@4f {
-		label = "pa_therm0";
+		label = "fps_therm";
 		reg = <0x4f>;
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
@@ -729,19 +729,8 @@
 		qcom,fast-avg-setup = <0>;
 	};
 
-	chan@50 {
-		label = "pa_therm1";
-		reg = <0x50>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
-	};
-
 	chan@51 {
-		label = "quiet_therm";
+		label = "pmi_therm";
 		reg = <0x51>;
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
@@ -775,19 +764,8 @@
 	};
 
 	chan@4d {
-		label = "cam_therm0";
+		label = "sdm_therm";
 		reg = <0x4d>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x88>;
-		qcom,thermal-node;
-	};
-
-	chan@4e {
-		label = "cam_therm1";
-		reg = <0x4e>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
 		qcom,scale-function = <2>;
@@ -796,9 +774,9 @@
 		qcom,thermal-node;
 	};
 
-	chan@4f {
-		label = "pa_therm0";
-		reg = <0x4f>;
+	chan@4e {
+		label = "quiet_therm";
+		reg = <0x4e>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
 		qcom,scale-function = <2>;
@@ -807,25 +785,25 @@
 		qcom,thermal-node;
 	};
 
-	chan@50 {
-		label = "pa_therm1";
-		reg = <0x50>;
+	chan@4f {
+		label = "fps_therm";
+		reg = <0x4f>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
 		qcom,scale-function = <2>;
 		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x90>;
+		qcom,btm-channel-number = <0x98>;
 		qcom,thermal-node;
 	};
 
 	chan@51 {
-		label = "quiet_therm";
+		label = "pmi_therm";
 		reg = <0x51>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
 		qcom,scale-function = <2>;
 		qcom,hw-settle-time = <2>;
-		qcom,btm-channel-number = <0x80>;
+		qcom,btm-channel-number = <0x88>;
 		qcom,thermal-node;
 	};
 };
@@ -851,7 +829,6 @@
 &thermal_zones {
 	vbat {
 		polling-delay-passive = <100>;
-
 		cooling-maps {
 			vbat_cpu4 {
 				trip = <&low_vbat>;
@@ -873,12 +850,15 @@
 				cooling-device =
 					<&CPU7 18 18>;
 			};
+			mnh_thermal {
+				trip = <&low_vbat>;
+				cooling-device =
+					<&mnh_thermal 3 3>;
+			};
 		};
 	};
-
 	soc {
 		polling-delay-passive = <0>;
-
 		cooling-maps {
 			soc_cpu4 {
 				trip = <&low_soc>;
@@ -902,10 +882,8 @@
 			};
 		};
 	};
-
 	ibat-high {
 		polling-delay-passive = <100>;
-
 		cooling-maps {
 			ibat_cpu4 {
 				trip = <&ibat_high>;
@@ -940,29 +918,13 @@
 		trips {
 			active-config0 {
 				temperature = <125000>;
-				hysteresis = <1000>;
+				hysteresis = <10000>;
 				type = "passive";
 			};
 		};
 	};
 
-	xo_therm {
-		polling-delay-passive = <0>;
-		polling-delay = <0>;
-		thermal-sensors = <&pm8998_adc_tm 0x4c>;
-		thermal-governor = "user_space";
-		wake-capable-sensor;
-
-		trips {
-			active-config0 {
-				temperature = <125000>;
-				hysteresis = <1000>;
-				type = "passive";
-			};
-		};
-	};
-
-	cam_therm0 {
+	sdm-therm-adc {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4d>;
@@ -972,39 +934,91 @@
 		trips {
 			active-config0 {
 				temperature = <125000>;
-				hysteresis = <1000>;
+				hysteresis = <10000>;
 				type = "passive";
 			};
 		};
 	};
 
-	cam_therm1 {
+	quiet-therm-adc {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4e>;
 		thermal-governor = "user_space";
 		wake-capable-sensor;
+		disable-thermal-zone;
 
 		trips {
 			active-config0 {
 				temperature = <125000>;
-				hysteresis = <1000>;
+				hysteresis = <10000>;
 				type = "passive";
 			};
 		};
 	};
 
-	pa_therm0 {
+	backup-charge {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8998_adc_tm 0x4f>;
+		thermal-governor = "step_wise";
+		wake-capable-sensor;
+		disable-thermal-zone;
+
+		trips {
+			batt_charging_lv1: batt-charging_lv1 {
+				temperature = <39000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+			batt_charging_lv2: batt-charging_lv2 {
+				temperature = <41000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+			batt_charging_lv3: batt-charging_lv3 {
+				temperature = <43000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+			batt_charging_lv4: batt-charging_lv4 {
+				temperature = <48000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+		};
+		cooling-maps {
+			charging_cdev_lv1 {
+				trip = <&batt_charging_lv1>;
+				cooling-device = <&pmi8998_charger 1 1>;
+			};
+			charging_cdev_lv2 {
+				trip = <&batt_charging_lv2>;
+				cooling-device = <&pmi8998_charger 2 2>;
+			};
+			charging_cdev_lv3 {
+				trip = <&batt_charging_lv3>;
+				cooling-device = <&pmi8998_charger 3 3>;
+			};
+			charging_cdev_lv4 {
+				trip = <&batt_charging_lv4>;
+				cooling-device = <&pmi8998_charger 4 4>;
+			};
+		};
+	};
+
+	fps-therm-adc {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x4f>;
 		thermal-governor = "user_space";
 		wake-capable-sensor;
+		disable-thermal-zone;
 
 		trips {
 			active-config0 {
 				temperature = <125000>;
-				hysteresis = <1000>;
+				hysteresis = <10000>;
 				type = "passive";
 			};
 			shutdown-config {
@@ -1015,23 +1029,22 @@
 		};
 	};
 
-	pa_therm1 {
+	fps-therm-monitor {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
-		thermal-sensors = <&pm8998_adc_tm 0x50>;
+		thermal-sensors = <&pm8998_adc_tm 0x4f>;
 		thermal-governor = "user_space";
-		wake-capable-sensor;
 
 		trips {
 			active-config0 {
 				temperature = <125000>;
-				hysteresis = <1000>;
+				hysteresis = <10000>;
 				type = "passive";
 			};
 		};
 	};
 
-	quiet_therm {
+	pmi_therm-adc {
 		polling-delay-passive = <0>;
 		polling-delay = <0>;
 		thermal-sensors = <&pm8998_adc_tm 0x51>;
@@ -1041,7 +1054,7 @@
 		trips {
 			active-config0 {
 				temperature = <125000>;
-				hysteresis = <1000>;
+				hysteresis = <10000>;
 				type = "passive";
 			};
 		};
