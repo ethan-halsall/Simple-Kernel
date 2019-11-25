@@ -683,7 +683,7 @@ static void ufshcd_cmd_log_init(struct ufs_hba *hba)
 {
 }
 
-#if defined(CONFIG_SCSI_UFSHCD_CMD_LOGGING) || defined(CONFIG_TRACEPOINTS)
+#ifdef CONFIG_TRACEPOINTS
 static void __ufshcd_cmd_log(struct ufs_hba *hba, char *str, char *cmd_type,
 			     unsigned int tag, u8 cmd_id, u8 idn, u8 lun,
 			     sector_t lba, int transfer_len)
@@ -9981,9 +9981,6 @@ int ufshcd_shutdown(struct ufs_hba *hba)
 {
 	int ret = 0;
 
-	if (!hba->is_powered)
-		goto out;
-
 	if (ufshcd_is_ufs_dev_poweroff(hba) && ufshcd_is_link_off(hba))
 		goto out;
 
@@ -10310,6 +10307,9 @@ static void ufshcd_clock_scaling_unprepare(struct ufs_hba *hba)
 static int ufshcd_devfreq_scale(struct ufs_hba *hba, bool scale_up)
 {
 	int ret = 0;
+
+	if (!hba->is_powered)
+		goto out;
 
 	if (hba->extcon && ufshcd_is_card_offline(hba))
 		return 0;
@@ -10866,8 +10866,6 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	ufsdbg_add_debugfs(hba);
 
 	ufshcd_add_sysfs_nodes(hba);
-
-	device_enable_async_suspend(dev);
 
 	return 0;
 
