@@ -2442,7 +2442,10 @@ static void tcp_undo_cwnd_reduction(struct sock *sk, bool unmark_loss)
 	if (tp->prior_ssthresh) {
 		const struct inet_connection_sock *icsk = inet_csk(sk);
 
-		tp->snd_cwnd = icsk->icsk_ca_ops->undo_cwnd(sk);
+		if (icsk->icsk_ca_ops->undo_cwnd)
+			tp->snd_cwnd = icsk->icsk_ca_ops->undo_cwnd(sk);
+		else
+			tp->snd_cwnd = max(tp->snd_cwnd, tp->snd_ssthresh << 1);
 
 		if (tp->prior_ssthresh > tp->snd_ssthresh) {
 			tp->snd_ssthresh = tp->prior_ssthresh;
