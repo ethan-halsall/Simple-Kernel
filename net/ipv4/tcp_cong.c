@@ -198,10 +198,8 @@ static void tcp_reinit_congestion_control(struct sock *sk,
 	icsk->icsk_ca_setsockopt = 1;
 	memset(icsk->icsk_ca_priv, 0, sizeof(icsk->icsk_ca_priv));
 
-	if (sk->sk_state != TCP_CLOSE) {
-		memset(icsk->icsk_ca_priv, 0, sizeof(icsk->icsk_ca_priv));
+	if (sk->sk_state != TCP_CLOSE)
 		tcp_init_congestion_control(sk);
-	}
 }
 
 /* Manage refcounts on socket close. */
