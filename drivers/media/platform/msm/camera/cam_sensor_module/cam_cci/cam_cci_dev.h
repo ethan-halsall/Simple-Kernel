@@ -226,6 +226,7 @@ struct cci_device {
 	uint8_t payload_size;
 	char device_name[20];
 	uint32_t cpas_handle;
+	struct mutex mutex;
 	uint32_t irq_status1;
 	spinlock_t lock_status;
 	bool is_burst_read;
