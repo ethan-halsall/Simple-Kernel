@@ -263,9 +263,7 @@ static int __die(const char *str, int err, struct pt_regs *regs)
 	return ret;
 }
 
-static arch_spinlock_t die_lock = __ARCH_SPIN_LOCK_UNLOCKED;
-static int die_owner = -1;
-static unsigned int die_nest_count;
+static DEFINE_RAW_SPINLOCK(die_lock);
 
 #define FS_SYNC_TIMEOUT_MS 2000
 static struct work_struct fs_sync_work;
@@ -290,9 +288,9 @@ EXPORT_SYMBOL(exec_fs_sync_work);
 /*
  * This function is protected against re-entrancy.
  */
-static unsigned long oops_begin(void)
+void die(const char *str, struct pt_regs *regs, int err)
 {
-	int cpu;
+	int ret;
 	unsigned long flags;
 
 	if (!in_atomic())
@@ -301,64 +299,30 @@ static unsigned long oops_begin(void)
 		exec_fs_sync_work();
 	}
 
+	raw_spin_lock_irqsave(&die_lock, flags);
+
 	oops_enter();
 
-	/* racy, but better than risking deadlock. */
-	raw_local_irq_save(flags);
-	cpu = smp_processor_id();
-	if (!arch_spin_trylock(&die_lock)) {
-		if (cpu == die_owner)
-			/* nested oops. should stop eventually */;
-		else
-			arch_spin_lock(&die_lock);
-	}
-	die_nest_count++;
-	die_owner = cpu;
 	console_verbose();
 	bust_spinlocks(1);
-	return flags;
-}
+	ret = __die(str, err, regs);
 
-static void oops_end(unsigned long flags, struct pt_regs *regs, int notify)
-{
 	if (regs && kexec_should_crash(current))
 		crash_kexec(regs);
 
 	bust_spinlocks(0);
-	die_owner = -1;
 	add_taint(TAINT_DIE, LOCKDEP_NOW_UNRELIABLE);
-	die_nest_count--;
-	if (!die_nest_count)
-		/* Nest count reaches zero, release the lock. */
-		arch_spin_unlock(&die_lock);
-	raw_local_irq_restore(flags);
 	oops_exit();
 
 	if (in_interrupt())
 		panic("Fatal exception in interrupt");
 	if (panic_on_oops)
 		panic("Fatal exception");
-	if (notify != NOTIFY_STOP)
+
+	raw_spin_unlock_irqrestore(&die_lock, flags);
+
+	if (ret != NOTIFY_STOP)
 		do_exit(SIGSEGV);
-}
-
-/*
- * This function is protected against re-entrancy.
- */
-void die(const char *str, struct pt_regs *regs, int err)
-{
-	enum bug_trap_type bug_type = BUG_TRAP_TYPE_NONE;
-	unsigned long flags = oops_begin();
-	int ret;
-
-	if (!user_mode(regs))
-		bug_type = report_bug(regs->pc, regs);
-	if (bug_type != BUG_TRAP_TYPE_NONE && !strlen(str))
-		str = "Oops - BUG";
-
-	ret = __die(str, err, regs);
-
-	oops_end(flags, regs, ret);
 }
 
 void arm64_notify_die(const char *str, struct pt_regs *regs,
