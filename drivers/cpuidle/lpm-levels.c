@@ -558,6 +558,21 @@ static void clear_predict_history(void)
 
 static void update_history(struct cpuidle_device *dev, int idx);
 
+static void calculate_next_wakeup(uint32_t *next_wakeup_us,
+				  uint32_t next_event_us,
+				  uint32_t lvl_latency_us,
+				  s64 sleep_us)
+{
+	if (!next_event_us)
+		return;
+
+	if (next_event_us < lvl_latency_us)
+		return;
+
+	if (next_event_us < sleep_us)
+		*next_wakeup_us = next_event_us - lvl_latency_us;
+}
+
 static int cpu_power_select(struct cpuidle_device *dev,
 		struct lpm_cpu *cpu)
 {
@@ -598,14 +613,8 @@ static int cpu_power_select(struct cpuidle_device *dev,
 		if (latency_us <= lvl_latency_us)
 			break;
 
-		if (next_event_us) {
-			if (next_event_us < lvl_latency_us)
-				break;
-
-			if (((next_event_us - lvl_latency_us) < sleep_us) ||
-					(next_event_us < sleep_us))
-				next_wakeup_us = next_event_us - lvl_latency_us;
-		}
+		calculate_next_wakeup(&next_wakeup_us, next_event_us,
+				      lvl_latency_us, sleep_us);
 
 		if (!i) {
 			/*
