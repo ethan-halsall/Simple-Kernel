@@ -29,6 +29,22 @@ config MSM_CAMERA_DEBUG
     ---help---
       Enable printk() debug for msm camera
 
+menuconfig XIAOMI_DIR_CAMERA
+    bool "Xiaomi MSM camera directory support"
+    ---help---
+      Say Y here to enable selecting the vendor Xiaomi camera driver
+      directories to compile into the kernel.
+
+config USE_BU64748
+	bool "use BU64748 acculator"
+  depends on XIAOMI_DIR_CAMERA
+	default n
+
+config USE_ROHM_BU64753
+	bool "use ROHM BU64753 acculator"
+  depends on XIAOMI_DIR_CAMERA
+	default n
+
 menuconfig MSMB_CAMERA
     bool "QTI MSM camera and video capture 2.0 support"
     depends on ARCH_QCOM && VIDEO_V4L2 && I2C

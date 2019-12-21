@@ -1,5 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,7 +15,7 @@
 
 #include <linux/kernel.h>
 
-#define ISP_TRACE_ENABLE			1
+#define ISP_TRACE_ENABLE			0
 
 #if (ISP_TRACE_ENABLE == 1)
 	#define ISP_TRACE(args...)		trace_printk(args)

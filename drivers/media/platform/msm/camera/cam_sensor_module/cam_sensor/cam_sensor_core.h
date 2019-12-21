@@ -1,5 +1,4 @@
 /* Copyright (c) 2017, The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,8 +14,6 @@
 #define _CAM_SENSOR_CORE_H_
 
 #include "cam_sensor_dev.h"
-
-#define MV_TEMP_SET 1
 
 /**
  * @s_ctrl: Sensor ctrl structure

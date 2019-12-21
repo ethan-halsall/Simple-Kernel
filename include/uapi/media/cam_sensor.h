@@ -370,7 +370,9 @@ struct cam_sensor_acquire_dev {
 	uint32_t    handle_type;
 	uint32_t    reserved;
 	uint64_t    info_handle;
+#ifdef CONFIG_XIAOMI_DIR_CAMERA
 	uint32_t    operation_mode;
+#endif
 } __attribute__((packed));
 
 /**

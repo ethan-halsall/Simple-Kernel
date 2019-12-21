@@ -1,5 +1,4 @@
 /* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +25,7 @@
 #include "cam_subdev.h"
 #include "cam_mem_mgr.h"
 #include "cam_debug_util.h"
+#include "cam_common_util.h"
 #include <linux/slub_def.h>
 
 #define CAM_REQ_MGR_EVENT_MAX 30
@@ -154,6 +154,10 @@ static unsigned int cam_req_mgr_poll(struct file *f,
 
 static int cam_req_mgr_close(struct file *filep)
 {
+	struct v4l2_subdev *sd;
+	struct v4l2_fh *vfh = filep->private_data;
+	struct v4l2_subdev_fh *subdev_fh = to_v4l2_subdev_fh(vfh);
+
 	mutex_lock(&g_dev.cam_lock);
 
 	if (g_dev.open_cnt <= 0) {
@@ -162,6 +166,17 @@ static int cam_req_mgr_close(struct file *filep)
 	}
 
 	cam_req_mgr_handle_core_shutdown();
+
+	list_for_each_entry(sd, &g_dev.v4l2_dev->subdevs, list) {
+		if (!(sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE))
+			continue;
+		if (sd->internal_ops && sd->internal_ops->close) {
+			CAM_DBG(CAM_CRM, "Invoke subdev close for device %s",
+				sd->name);
+			sd->internal_ops->close(sd, subdev_fh);
+		}
+	}
+
 	g_dev.open_cnt--;
 	v4l2_fh_release(filep);
 
@@ -221,14 +236,15 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&ses_info,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
 
 		rc = cam_req_mgr_create_session(&ses_info);
 		if (!rc)
-			if (copy_to_user((void *)k_ioctl->handle,
+			if (copy_to_user(
+				u64_to_user_ptr(k_ioctl->handle),
 				&ses_info, k_ioctl->size))
 				rc = -EFAULT;
 		}
@@ -241,7 +257,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&ses_info,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
@@ -257,14 +273,15 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&link_info,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
 
 		rc = cam_req_mgr_link(&link_info);
 		if (!rc)
-			if (copy_to_user((void *)k_ioctl->handle,
+			if (copy_to_user(
+				u64_to_user_ptr(k_ioctl->handle),
 				&link_info, k_ioctl->size))
 				rc = -EFAULT;
 		}
@@ -277,7 +294,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&unlink_info,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
@@ -293,7 +310,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&sched_req,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
@@ -309,7 +326,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&flush_info,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
@@ -325,7 +342,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&sync_info,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			return -EFAULT;
 		}
@@ -340,7 +357,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			rc = -EFAULT;
 			break;
@@ -348,7 +365,8 @@ static long cam_private_ioctl(struct file *file, void *fh,
 
 		rc = cam_mem_mgr_alloc_and_map(&cmd);
 		if (!rc)
-			if (copy_to_user((void *)k_ioctl->handle,
+			if (copy_to_user(
+				u64_to_user_ptr(k_ioctl->handle),
 				&cmd, k_ioctl->size)) {
 				rc = -EFAULT;
 				break;
@@ -362,7 +380,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			rc = -EFAULT;
 			break;
@@ -370,7 +388,8 @@ static long cam_private_ioctl(struct file *file, void *fh,
 
 		rc = cam_mem_mgr_map(&cmd);
 		if (!rc)
-			if (copy_to_user((void *)k_ioctl->handle,
+			if (copy_to_user(
+				u64_to_user_ptr(k_ioctl->handle),
 				&cmd, k_ioctl->size)) {
 				rc = -EFAULT;
 				break;
@@ -384,7 +403,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			rc = -EFAULT;
 			break;
@@ -400,7 +419,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			(void *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			rc = -EFAULT;
 			break;
@@ -418,7 +437,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			(void __user *)k_ioctl->handle,
+			u64_to_user_ptr(k_ioctl->handle),
 			k_ioctl->size)) {
 			rc = -EFAULT;
 			break;
@@ -585,13 +604,13 @@ EXPORT_SYMBOL(cam_unregister_subdev);
 static int cam_req_mgr_remove(struct platform_device *pdev)
 {
 	cam_req_mgr_core_device_deinit();
-	cam_mem_mgr_deinit();
 	cam_req_mgr_util_deinit();
 	cam_media_device_cleanup();
 	cam_video_device_cleanup();
 	cam_v4l2_device_cleanup();
 	mutex_destroy(&g_dev.dev_lock);
 	g_dev.state = false;
+	g_dev.subdev_nodes_created = false;
 
 	return 0;
 }
@@ -624,12 +643,6 @@ static int cam_req_mgr_probe(struct platform_device *pdev)
 		goto req_mgr_util_fail;
 	}
 
-	rc = cam_mem_mgr_init();
-	if (rc) {
-		CAM_ERR(CAM_CRM, "mem mgr init failed");
-		goto mem_mgr_init_fail;
-	}
-
 	rc = cam_req_mgr_core_device_init();
 	if (rc) {
 		CAM_ERR(CAM_CRM, "core device setup failed");
@@ -654,8 +667,6 @@ static int cam_req_mgr_probe(struct platform_device *pdev)
 	return rc;
 
 req_mgr_core_fail:
-	cam_mem_mgr_deinit();
-mem_mgr_init_fail:
 	cam_req_mgr_util_deinit();
 req_mgr_util_fail:
 	mutex_destroy(&g_dev.dev_lock);
@@ -681,6 +692,7 @@ static struct platform_driver cam_req_mgr_driver = {
 		.name = "cam_req_mgr",
 		.owner = THIS_MODULE,
 		.of_match_table = cam_req_mgr_dt_match,
+		.suppress_bind_attrs = true,
 	},
 };
 

@@ -1,5 +1,4 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -262,8 +261,8 @@ enum bps_io_images {
 };
 
 struct frame_buffer {
-	uint32_t buffer_ptr[MAX_NUM_OF_IMAGE_PLANES];
-	uint32_t meta_buffer_ptr[MAX_NUM_OF_IMAGE_PLANES];
+	uint32_t buf_ptr[MAX_NUM_OF_IMAGE_PLANES];
+	uint32_t meta_buf_ptr[MAX_NUM_OF_IMAGE_PLANES];
 } __packed;
 
 struct bps_frame_process_data {
