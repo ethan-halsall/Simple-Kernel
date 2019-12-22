@@ -144,6 +144,12 @@ struct ft5x46_data {
 
 	int touchs;
 	int keys;
+	int dbclick_count;
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+	bool palm_enabled;
+	bool palm_sensor_changed;
+	struct class *tp_class;
+#endif
 #ifdef CONFIG_DRM
 	struct notifier_block drm_notifier;
 #endif

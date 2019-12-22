@@ -116,6 +116,7 @@ struct synaptics_dsx_config_info {
 	const char *chip_id_name;
 	unsigned char *tp_ids;
 	const char *fw_name;
+	const char *clicknum_file_name;
 	struct synaptics_dsx_panel_power_seq panel_power_seq;
 	struct synaptics_dsx_factory_param *factory_param;
 };
@@ -185,6 +186,9 @@ struct synaptics_dsx_board_data {
 	unsigned int reset_active_ms;
 	unsigned int byte_delay_us;
 	unsigned int block_delay_us;
+	unsigned int palm_rx_channel;
+	unsigned int palm_rx_area;
+	unsigned int palm_tx_disable;
 	bool cut_off_power;
 	bool power_ctrl;
 	bool panel_is_incell;
