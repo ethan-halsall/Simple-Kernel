@@ -124,7 +124,12 @@
 
 #define PINCTRL_STATE_ACTIVE	"pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND	"pmx_ts_suspend"
-
+#ifndef CONFIG_SYNA_TOUCH_COUNT_DUMP
+#define CONFIG_SYNA_TOUCH_COUNT_DUMP
+#endif
+#ifdef CONFIG_SYNA_TOUCH_COUNT_DUMP
+#define TOUCH_COUNT_FILE_MAXSIZE 50
+#endif
 enum exp_fn {
 	RMI_DEV = 0,
 	RMI_FW_UPDATER,
@@ -353,6 +358,11 @@ struct synaptics_rmi4_data {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
+#ifdef CONFIG_SYNA_TOUCH_COUNT_DUMP
+	struct class *syna_tp_class;
+	struct device *syna_touch_dev;
+	char *current_clicknum_file;
+#endif
 	unsigned char current_page;
 	unsigned char button_0d_enabled;
 	unsigned char num_of_tx;
@@ -384,6 +394,12 @@ struct synaptics_rmi4_data {
 	int force_max;
 	int chip_id;
 	int touchs;
+	int dbclick_count;
+	unsigned int palm_tx_grip_disable;
+	unsigned int palm_tx_area_threshold;
+	unsigned int palm_tx_channel_threshold;
+	unsigned int palm_rx_area_threshold;
+	unsigned int palm_rx_channel_threshold;
 	bool flash_prog_mode;
 	bool irq_enabled;
 	bool fingers_on_2d;
@@ -401,6 +417,8 @@ struct synaptics_rmi4_data {
 	bool external_afe_buttons;
 	bool fw_updating;
 	bool wakeup_en;
+	bool palm_enabled;
+	bool report_palm;
 	bool chip_is_tddi;
 	bool open_test_b7;
 	bool short_test_extend;
@@ -435,6 +453,7 @@ struct synaptics_rmi4_data {
 	struct clk *core_clk;
 	struct clk *iface_clk;
 #endif
+	bool palm_sensor_changed;
 };
 
 struct synaptics_dsx_bus_access {

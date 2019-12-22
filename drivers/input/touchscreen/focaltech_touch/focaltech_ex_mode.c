@@ -230,6 +230,29 @@ static DEVICE_ATTR(fts_cover_mode, S_IRUGO | S_IWUSR, fts_touch_cover_show, fts_
 #endif
 
 #if FTS_CHARGER_EN
+
+int fts_charger_mode_set(struct i2c_client *client, bool on)
+{
+	int ret = 0;
+
+	if (on && !g_fts_mode_flag.fts_charger_mode_flag) {
+		FTS_INFO("[Mode]enter charger mode");
+		ret = fts_enter_charger_mode(client, true);
+		if (ret >= 0) {
+			g_fts_mode_flag.fts_charger_mode_flag = true;
+		}
+	}
+
+	if (!on && g_fts_mode_flag.fts_charger_mode_flag) {
+		FTS_INFO("[Mode]exit charger mode");
+		ret = fts_enter_charger_mode(client, false);
+		if (ret >= 0) {
+			g_fts_mode_flag.fts_charger_mode_flag = false;
+		}
+	}
+	return ret;
+}
+
 static ssize_t fts_touch_charger_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int count;

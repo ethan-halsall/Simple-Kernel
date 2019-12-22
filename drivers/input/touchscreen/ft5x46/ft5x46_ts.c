@@ -16,6 +16,9 @@
 #include <linux/hwinfo.h>
 
 #include "ft8716_pramboot.h"
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+#include <../xiaomi/xiaomi_touch.h>
+#endif
 
 /* #define FT5X46_DEBUG_PERMISSION */
 #define FT5X46_APK_DEBUG_CHANNEL
@@ -188,6 +191,9 @@
 static bool lcd_need_reset;
 static unsigned char proc_operate_mode = FT5X46_PROC_UPGRADE;
 static struct proc_dir_entry *ft5x46_proc_entry;
+#endif
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+static int ft5x46_palm_enable(struct ft5x46_data *ft5x46, int on);
 #endif
 struct ft5x46_packet {
 	u8  magic1;
@@ -1261,6 +1267,7 @@ static int ft8716_load_firmware(struct ft5x46_data *ft5x46,
 	u32 check_off = 0x20;
 	u32 start_addr = 0x00;
 	u8 packet_buf[16 + FT5X0X_PACKET_LENGTH];
+	u8 *tp_maker = NULL;
 
 	const struct firmware *fw;
 	int packet_num;
@@ -1299,7 +1306,10 @@ static int ft8716_load_firmware(struct ft5x46_data *ft5x46,
 			ft8716_reset_firmware(ft5x46);
 			return error;
 		}
-		update_hardware_info(TYPE_TP_MAKER, ft5x46->lockdown_info[0] - 0x30);
+
+		if (tp_maker == NULL)
+			dev_err(ft5x46->dev, "fail to alloc vendor name memory\n");
+
 		ft5x46->lockdown_info_acquired = true;
 		wake_up(&ft5x46->lockdown_info_acquired_wq);
 	}
@@ -1763,7 +1773,18 @@ static irqreturn_t ft5x46_interrupt(int irq, void *dev_id)
 	u8 val = 0;
 
 	mutex_lock(&ft5x46->mutex);
-
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+	if (ft5x46->palm_enabled) {
+		error = ft5x46_read_byte(ft5x46, 0x9B, &val);
+		if (error) {
+			dev_err(ft5x46->dev, "Error reading register 0x9B\n");
+			goto out;
+		}
+		update_palm_sensor_value(!!val);
+		if (val)
+			goto out;
+	}
+#endif
 	if (ft5x46->wakeup_mode && ft5x46->in_suspend) {
 		error = ft5x46_read_byte(ft5x46, 0xD0, &val);
 		if (error)
@@ -1810,6 +1831,13 @@ int ft5x46_suspend(struct ft5x46_data *ft5x46)
 
 	ft5x46_clear_touch_event(ft5x46);
 	mutex_unlock(&ft5x46->mutex);
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+	if (ft5x46->palm_enabled) {
+		update_palm_sensor_value(0);
+		ft5x46_palm_enable(ft5x46, 0);
+		ft5x46->palm_enabled = false;
+	}
+#endif
 
 	cancel_delayed_work_sync(&ft5x46->noise_filter_delayed_work);
 	cancel_delayed_work_sync(&ft5x46->lcd_esdcheck_work);
@@ -1878,6 +1906,12 @@ int ft5x46_resume(struct ft5x46_data *ft5x46)
 
 	mutex_lock(&ft5x46->mutex);
 	ft5x46->in_suspend = false;
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+	if (ft5x46->palm_enabled && !ft5x46->palm_sensor_changed) {
+		ft5x46_palm_enable(ft5x46, 1);
+		ft5x46->palm_sensor_changed = true;
+	}
+#endif
 
 	schedule_delayed_work(&ft5x46->lcd_esdcheck_work,
 				msecs_to_jiffies(FT5X46_ESD_CHECK_PERIOD));
@@ -1888,7 +1922,6 @@ out:
 #ifdef CONFIG_TOUCHSCREEN_FT5X46P_PROXIMITY
 	wake_up(&ft5x46->resume_wq);
 #endif
-
 	return 0;
 }
 EXPORT_SYMBOL_GPL(ft5x46_resume);
@@ -2706,6 +2739,54 @@ static ssize_t ft5x46_lcd_esd_test(struct device *dev,
 
 	return error ? : count;
 }
+
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+static struct xiaomi_touch_interface xiaomi_touch_interfaces;
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+static int ft5x46_palm_enable(struct ft5x46_data *ft5x46, int on)
+{
+	int retval;
+	unsigned char enable;
+	unsigned char palm_on = 0x05;
+	unsigned char palm_off = 0x00;
+
+	enable = on > 0 ? 1 : 0;
+
+	dev_info(ft5x46->dev, "%s: on:%d\n", __func__, on);
+
+	if (on)
+		retval = ft5x46_write_byte(ft5x46, 0x9A, palm_on);
+	else
+		retval = ft5x46_write_byte(ft5x46, 0x9A, palm_off);
+
+	if (retval < 0)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int ft5x46_palmsensor_enable(int on)
+{
+	struct ft5x46_data *ft5x46 = ft_data;
+	int ret = 0;
+
+	if (!ft5x46)
+		return -EINVAL;
+	ft5x46->palm_enabled = on;
+	if (ft5x46->in_suspend) {
+		dev_err(ft5x46->dev, "%s tp has suspended\n", __func__);
+		ft5x46->palm_sensor_changed = false;
+		return 0;
+	}
+
+	ret = ft5x46_palm_enable(ft5x46, on);
+	if (!ret)
+		ft5x46->palm_sensor_changed = true;
+	return ret;
+}
+
+#endif
+#endif
 
 /* sysfs */
 #ifdef FT5X46_DEBUG_PERMISSION
@@ -4287,6 +4368,17 @@ struct ft5x46_data *ft5x46_probe(struct device *dev,
 	ft5x46->hw_is_ready = false;
 	init_waitqueue_head(&ft5x46->lockdown_info_acquired_wq);
 	schedule_work(&ft5x46->work);
+
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE
+	dev_err(dev, "ft5x46 register touch screen  palm_enable\n");
+	memset(&xiaomi_touch_interfaces, 0x00, sizeof(struct xiaomi_touch_interface));
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_TOUCHFEATURE_SENSOR
+	xiaomi_touch_interfaces.palm_sensor_write = ft5x46_palmsensor_enable;
+	xiaomitouch_register_modedata(&xiaomi_touch_interfaces);
+	ft5x46->tp_class = get_xiaomi_touch_class();
+#endif
+#endif
+
 	return ft5x46;
 
 #ifdef FT5X46_APK_DEBUG_CHANNEL
