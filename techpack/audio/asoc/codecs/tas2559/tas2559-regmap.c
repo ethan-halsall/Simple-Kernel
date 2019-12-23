@@ -1,6 +1,7 @@
 /*
 ** =============================================================================
 ** Copyright (c) 2016  Texas Instruments Inc.
+** Copyright (C) 2019 XiaoMi, Inc.
 **
 ** This program is free software; you can redistribute it and/or modify it under
 ** the terms of the GNU General Public License as published by the Free Software
@@ -915,7 +916,7 @@ static void timer_work_routine(struct work_struct *work)
 			dev_dbg(pTAS2559->dev, "check : avg=%d\n", nAvg);
 
 			if (nAvg < -6) {
-				/* if Die temperature is below -6 degree C */
+				/* if Die temperature is below -6 degree C  */
 				if (pTAS2559->mnDevCurrentGain != LOW_TEMPERATURE_GAIN) {
 					nResult = tas2559_set_DAC_gain(pTAS2559, DevBoth, LOW_TEMPERATURE_GAIN);
 
