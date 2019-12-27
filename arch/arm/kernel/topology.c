@@ -11,7 +11,6 @@
  * for more details.
  */
 
-#include <linux/arch_topology.h>
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/export.h>
