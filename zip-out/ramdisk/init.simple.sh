@@ -21,29 +21,6 @@ for i in /sys/block/*/queue; do
   echo "cfq" > $i/scheduler;
 done;
 
-# Disable CAF task placement for Big Cores
-echo 0 > /proc/sys/kernel/sched_walt_rotate_big_tasks
-
-# Disable sched stats for less overhead
-echo 0 > /proc/sys/kernel/sched_schedstats
-
-# Setup EAS cpusets values for better load balancing
-echo "0-7" > /dev/cpuset/top-app/cpus 
-
-# Since we are not using core rotator, lets load balance
-echo "0-3,6-7" > /dev/cpuset/foreground/cpus
-echo "0-1" > /dev/cpuset/background/cpus
-echo "0-3" > /dev/cpuset/system-background/cpus 
-
-# Manually force all of the kernel tasks to be applied upon the low power cores / cluster for power saving reasons;
-echo "0-3" > /dev/cpuset/kernel/cpus
-
-# For better screen off idle
-echo "0-3" > /dev/cpuset/restricted/cpus 
-
-#Enable suspend to idle mode to reduce latency during suspend/resume
-echo "s2idle" > /sys/power/mem_sleep
-
 # Disable a few minor and overall pretty useless modules for slightly better battery life & system wide performance;
 echo "Y" > /sys/module/bluetooth/parameters/disable_ertm
 echo "Y" > /sys/module/bluetooth/parameters/disable_esco
