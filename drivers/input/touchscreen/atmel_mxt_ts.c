@@ -6811,6 +6811,8 @@ static int mxt_remove(struct i2c_client *client)
 
 	g_mxt_data = NULL;
 
+	disable_irq(data->irq);
+
 	return 0;
 }
 
@@ -6821,6 +6823,7 @@ static void mxt_shutdown(struct i2c_client *client)
 	mxt_disable_irq(data);
 	data->state = SHUTDOWN;
 }
+
 
 #ifdef CONFIG_PM
 static int mxt_ts_suspend(struct device *dev)
