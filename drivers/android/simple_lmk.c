@@ -5,7 +5,6 @@
 
 #define pr_fmt(fmt) "simple_lmk: " fmt
 
-#include <linux/delay.h>
 #include <linux/kthread.h>
 #include <linux/mm.h>
 #include <linux/moduleparam.h>
@@ -16,12 +15,6 @@
 /* The sched_param struct is located elsewhere in newer kernels */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <uapi/linux/sched/types.h>
-#endif
-
-/* MIN_NICE isn't present and MAX_RT_PRIO is elsewhere in older kernels */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
-#include <linux/sched/rt.h>
-#define MIN_NICE -20
 #endif
 
 /* SEND_SIG_FORCED isn't present in newer kernels */
@@ -73,7 +66,7 @@ static const short adj_prio[] = {
 static struct victim_info victims[MAX_VICTIMS];
 static DECLARE_WAIT_QUEUE_HEAD(oom_waitq);
 static DECLARE_COMPLETION(reclaim_done);
-static int victims_to_kill;
+static atomic_t victims_to_kill = ATOMIC_INIT(0);
 static atomic_t needs_reclaim = ATOMIC_INIT(0);
 
 static int victim_size_cmp(const void *lhs_ptr, const void *rhs_ptr)
@@ -84,21 +77,19 @@ static int victim_size_cmp(const void *lhs_ptr, const void *rhs_ptr)
 	return rhs->size - lhs->size;
 }
 
-static bool vtsk_is_duplicate(struct victim_info *varr, int vlen,
-			      struct task_struct *vtsk)
+static bool vtsk_is_duplicate(int vlen, struct task_struct *vtsk)
 {
 	int i;
 
 	for (i = 0; i < vlen; i++) {
-		if (same_thread_group(varr[i].tsk, vtsk))
+		if (same_thread_group(victims[i].tsk, vtsk))
 			return true;
 	}
 
 	return false;
 }
 
-static unsigned long find_victims(struct victim_info *varr, int *vindex,
-				  int vmaxlen, short target_adj)
+static unsigned long find_victims(int *vindex, short target_adj)
 {
 	unsigned long pages_found = 0;
 	int old_vindex = *vindex;
@@ -117,7 +108,7 @@ static unsigned long find_victims(struct victim_info *varr, int *vindex,
 		 * trying to lock a task that we locked earlier.
 		 */
 		if (READ_ONCE(tsk->signal->oom_score_adj) != target_adj ||
-		    vtsk_is_duplicate(varr, *vindex, tsk))
+		    vtsk_is_duplicate(*vindex, tsk))
 			continue;
 
 		vtsk = find_lock_task_mm(tsk);
@@ -125,15 +116,15 @@ static unsigned long find_victims(struct victim_info *varr, int *vindex,
 			continue;
 
 		/* Store this potential victim away for later */
-		varr[*vindex].tsk = vtsk;
-		varr[*vindex].mm = vtsk->mm;
-		varr[*vindex].size = get_mm_rss(vtsk->mm);
+		victims[*vindex].tsk = vtsk;
+		victims[*vindex].mm = vtsk->mm;
+		victims[*vindex].size = get_mm_rss(vtsk->mm);
 
 		/* Keep track of the number of pages that have been found */
-		pages_found += varr[*vindex].size;
+		pages_found += victims[*vindex].size;
 
 		/* Make sure there's space left in the victim array */
-		if (++*vindex == vmaxlen)
+		if (++*vindex == MAX_VICTIMS)
 			break;
 	}
 
@@ -142,14 +133,13 @@ static unsigned long find_victims(struct victim_info *varr, int *vindex,
 	 * the larger ones first.
 	 */
 	if (pages_found)
-		sort(&varr[old_vindex], *vindex - old_vindex, sizeof(*varr),
-		     victim_size_cmp, NULL);
+		sort(&victims[old_vindex], *vindex - old_vindex,
+		     sizeof(*victims), victim_size_cmp, NULL);
 
 	return pages_found;
 }
 
-static int process_victims(struct victim_info *varr, int vlen,
-			   unsigned long pages_needed)
+static int process_victims(int vlen, unsigned long pages_needed)
 {
 	unsigned long pages_found = 0;
 	int i, nr_to_kill = 0;
@@ -187,8 +177,7 @@ static void scan_and_kill(unsigned long pages_needed)
 	 */
 	read_lock(&tasklist_lock);
 	for (i = 0; i < ARRAY_SIZE(adj_prio); i++) {
-		pages_found += find_victims(victims, &nr_victims, MAX_VICTIMS,
-					    adj_prio[i]);
+		pages_found += find_victims(&nr_victims, adj_prio[i]);
 		if (pages_found >= pages_needed || nr_victims == MAX_VICTIMS)
 			break;
 	}
@@ -199,7 +188,7 @@ static void scan_and_kill(unsigned long pages_needed)
 		return;
 
 	/* First round of victim processing to weed out unneeded victims */
-	nr_to_kill = process_victims(victims, nr_victims, pages_needed);
+	nr_to_kill = process_victims(nr_victims, pages_needed);
 
 	/*
 	 * Try to kill as few of the chosen victims as possible by sorting the
@@ -209,10 +198,10 @@ static void scan_and_kill(unsigned long pages_needed)
 	sort(victims, nr_to_kill, sizeof(*victims), victim_size_cmp, NULL);
 
 	/* Second round of victim processing to finally select the victims */
-	nr_to_kill = process_victims(victims, nr_to_kill, pages_needed);
+	nr_to_kill = process_victims(nr_to_kill, pages_needed);
 
 	/* Kill the victims */
-	WRITE_ONCE(victims_to_kill, nr_to_kill);
+	atomic_set_release(&victims_to_kill, nr_to_kill);
 	for (i = 0; i < nr_to_kill; i++) {
 		struct victim_info *victim = &victims[i];
 		struct task_struct *vtsk = victim->tsk;
@@ -256,19 +245,8 @@ static int simple_lmk_reclaim_thread(void *data)
 	sched_setscheduler_nocheck(current, SCHED_FIFO, &sched_max_rt_prio);
 
 	while (1) {
-		wait_event(oom_waitq, atomic_read(&needs_reclaim));
-
-		/*
-		 * Kill a batch of processes and wait for their memory to be
-		 * freed. After their memory is freed, sleep for 20 ms to give
-		 * OOM'd allocations a chance to scavenge for the newly-freed
-		 * pages. Rinse and repeat while there are still OOM'd
-		 * allocations.
-		 */
-		do {
-			scan_and_kill(MIN_FREE_PAGES);
-			msleep(20);
-		} while (atomic_read(&needs_reclaim));
+		wait_event(oom_waitq, atomic_add_unless(&needs_reclaim, -1, 0));
+		scan_and_kill(MIN_FREE_PAGES);
 	}
 
 	return 0;
@@ -276,16 +254,18 @@ static int simple_lmk_reclaim_thread(void *data)
 
 void simple_lmk_decide_reclaim(int kswapd_priority)
 {
-	if (kswapd_priority != CONFIG_ANDROID_SIMPLE_LMK_AGGRESSION)
-		return;
+	if (kswapd_priority == CONFIG_ANDROID_SIMPLE_LMK_AGGRESSION) {
+		int v, v1;
 
-	if (!atomic_cmpxchg(&needs_reclaim, 0, 1))
-		wake_up(&oom_waitq);
-}
-
-void simple_lmk_stop_reclaim(void)
-{
-	atomic_set(&needs_reclaim, 0);
+		for (v = 0;; v = v1) {
+			v1 = atomic_cmpxchg(&needs_reclaim, v, v + 1);
+			if (likely(v1 == v)) {
+				if (!v)
+					wake_up(&oom_waitq);
+				break;
+			}
+		}
+	}
 }
 
 void simple_lmk_mm_freed(struct mm_struct *mm)
@@ -293,11 +273,11 @@ void simple_lmk_mm_freed(struct mm_struct *mm)
 	static atomic_t nr_killed = ATOMIC_INIT(0);
 	int i, nr_to_kill;
 
-	nr_to_kill = READ_ONCE(victims_to_kill);
+	nr_to_kill = atomic_read_acquire(&victims_to_kill);
 	for (i = 0; i < nr_to_kill; i++) {
 		if (cmpxchg(&victims[i].mm, mm, NULL) == mm) {
 			if (atomic_inc_return(&nr_killed) == nr_to_kill) {
-				WRITE_ONCE(victims_to_kill, 0);
+				atomic_set(&victims_to_kill, 0);
 				nr_killed = (atomic_t)ATOMIC_INIT(0);
 				complete(&reclaim_done);
 			}
@@ -312,12 +292,11 @@ static int simple_lmk_init_set(const char *val, const struct kernel_param *kp)
 	static atomic_t init_done = ATOMIC_INIT(0);
 	struct task_struct *thread;
 
-	if (atomic_cmpxchg(&init_done, 0, 1))
-		return 0;
-
-	thread = kthread_run(simple_lmk_reclaim_thread, NULL, "simple_lmkd");
-	BUG_ON(IS_ERR(thread));
-
+	if (!atomic_cmpxchg(&init_done, 0, 1)) {
+		thread = kthread_run(simple_lmk_reclaim_thread, NULL,
+				     "simple_lmkd");
+		BUG_ON(IS_ERR(thread));
+	}
 	return 0;
 }
 
