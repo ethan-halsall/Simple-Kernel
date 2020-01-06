@@ -196,6 +196,8 @@ int dsi_display_set_backlight(void *display, u32 bl_lvl)
 		rc = dsi_panel_enable_doze_backlight(panel, (u32)bl_temp);
 		if (rc)
 			pr_err("unable to enable doze backlight\n");
+	} else if (drm_dev && drm_dev->doze_state == DRM_BLANK_LP2) {
+		pr_err("unable to set doze backlight in LP2 state:%u\n", (u32)bl_temp);
 	} else {
 		drm_dev->doze_brightness = DOZE_BRIGHTNESS_INVALID;
 		rc = dsi_panel_set_backlight(panel, (u32)bl_temp);
