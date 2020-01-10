@@ -28,6 +28,9 @@ echo "Y" > /sys/module/bluetooth/parameters/disable_esco
 # Use the deepest CPU idle state for a few additional power savings if your kernel of choice now supports it;
 echo "1" > /sys/devices/system/cpu/cpuidle/use_deepest_state
 
+# Enable auto deepest idle cluster state when screen is off (if kernel supports it)
+echo "Y" /sys/module/lpm_levels/parameters/cluster_deepest_state_auto
+
 # Enable display / screen panel power saving features;
 echo "Y" > /sys/kernel/debug/dsi_ss_ea8074_notch_fhd_cmd_display/dsi-phy-0_allow_phy_power_off
 echo "Y" > /sys/kernel/debug/dsi_ss_ea8074_notch_fhd_cmd_display/ulps_enable
