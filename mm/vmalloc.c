@@ -419,7 +419,6 @@ int is_vmalloc_addr(const void *x)
 	return addr >= VMALLOC_START && addr < VMALLOC_END;
 }
 
-static void calc_total_vmalloc_size(void) { }
 #endif
 EXPORT_SYMBOL(is_vmalloc_addr);
 
