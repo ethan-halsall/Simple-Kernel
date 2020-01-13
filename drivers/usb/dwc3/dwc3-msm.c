@@ -1573,6 +1573,8 @@ static int dwc3_msm_gsi_ep_op(struct usb_ep *ep,
 
 	dbg_log_string("%s(%d):%s", ep->name, ep->ep_num, gsi_op_to_string(op));
 
+	dbg_log_string("%s(%d):%s", ep->name, ep->ep_num, gsi_op_to_string(op));
+
 	switch (op) {
 	case GSI_EP_OP_PREPARE_TRBS:
 		request = (struct usb_gsi_request *)op_data;

@@ -186,6 +186,9 @@ struct cam_isp_context {
 	struct cam_isp_context_state_monitor cam_isp_ctx_state_monitor[
 		CAM_ISP_CTX_STATE_MONITOR_MAX_ENTRIES];
 	bool                             rdi_only_context;
+	bool                             irq_delay_detect;
+	uint64_t                         irq_timestamps;
+	uint64_t                         irq_timestamps_th;
 };
 
 /**

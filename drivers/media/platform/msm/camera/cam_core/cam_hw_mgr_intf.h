@@ -259,6 +259,7 @@ struct cam_hw_reset_args {
 enum cam_hw_mgr_command {
 	CAM_HW_MGR_CMD_INTERNAL,
 	CAM_HW_MGR_CMD_DUMP_PF_INFO,
+	CAM_HW_MGR_CMD_GET_TIMESTAMP_TH,
 };
 
 /**
@@ -276,6 +277,7 @@ struct cam_hw_cmd_args {
 	union {
 		void                       *internal_args;
 		struct cam_hw_dump_pf_args  pf_args;
+		uint64_t                    irq_timestamps_th;
 	} u;
 };
 

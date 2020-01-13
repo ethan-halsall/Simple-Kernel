@@ -496,6 +496,16 @@ struct cam_isp_sensor_config {
 	uint32_t                   vbi;
 } __attribute__((packed));
 
+/*
+ * struct cam_isp_fps_config - ISP usecase fps param
+ *
+ * @fps                 : usecase fps
+ */
+struct cam_isp_fps_config {
+	uint32_t    fps;
+} __attribute__((packed));
+
+
 /* Acquire Device/HW v2 */
 
 /**

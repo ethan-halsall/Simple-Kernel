@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2018,2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -275,6 +275,16 @@ struct cam_req_mgr_connected_device {
 	void                           *parent;
 };
 
+/* *
+ * struct cam_req_mgr_ife_sof_evt
+ * - Track SOF Events from IFE
+ * @ dev_hdl  : device handle
+ * @ sof_done : tracks sof for individual IFE
+ */
+struct cam_req_mgr_dev_sof_evt {
+	int32_t dev_hdl;
+	bool    sof_done;
+};
 /**
  * struct cam_req_mgr_core_link
  * -  Link Properties
@@ -337,6 +347,8 @@ struct cam_req_mgr_core_link {
 	bool                                 sync_link_sof_skip;
 	int64_t                              sync_trigger_frame_id;
 	int32_t                              open_req_cnt;
+	int32_t                              num_sof_src;
+	struct cam_req_mgr_dev_sof_evt       dev_sof_evt[3];
 	uint32_t                             last_flush_id;
 	atomic_t                             is_used;
 };

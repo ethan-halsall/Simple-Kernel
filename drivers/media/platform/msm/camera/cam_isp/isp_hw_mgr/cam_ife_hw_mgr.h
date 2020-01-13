@@ -92,6 +92,7 @@ struct cam_ife_hw_mgr_debug {
 	uint64_t       csid_debug;
 	uint32_t       enable_recovery;
 	uint32_t       camif_debug;
+	uint32_t       ife_timestamps_th;
 };
 
 /**
