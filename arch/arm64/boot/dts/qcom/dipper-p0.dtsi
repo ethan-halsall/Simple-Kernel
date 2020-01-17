@@ -162,7 +162,7 @@
 &dsi_ss_notch_fhd_ea8074_cmd {
 	qcom,panel-supply-entries = <&dsi_amoled_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <2>;
+	qcom,mdss-dsi-bl-min-level = <3>;
 	qcom,mdss-dsi-bl-max-level = <1023>;
 	qcom,platform-reset-gpio = <&tlmm 6 0>;
 	qcom,platform-te-gpio = <&tlmm 10 0>;
