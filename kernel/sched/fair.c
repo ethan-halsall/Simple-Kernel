@@ -7963,6 +7963,8 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		want_affine = (!wake_wide(p, sibling_count_hint) && !wake_cap(p, cpu, prev_cpu)
 			      && cpumask_test_cpu(cpu, tsk_cpus_allowed(p)));
 
+	}
+
 	if (energy_aware()) {
 		rcu_read_lock();
 		new_cpu = select_energy_cpu_brute(p, prev_cpu);
