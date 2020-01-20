@@ -20,6 +20,7 @@
 #include <linux/kallsyms.h>
 #include <linux/smpboot.h>
 #include <linux/atomic.h>
+#include <linux/sched/wake_q.h>
 #include <linux/nmi.h>
 
 /*
