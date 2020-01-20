@@ -522,6 +522,7 @@ struct cfs_rq {
 #endif
 
 	int runtime_enabled;
+	s64 runtime_remaining;
 
 	u64 throttled_clock, throttled_clock_task;
 	u64 throttled_clock_task_time;
