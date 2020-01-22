@@ -3263,12 +3263,12 @@ static const struct pid_entry tgid_base_stuff[] = {
 	ONE("limits",	  S_IRUGO, proc_pid_limits),
 #ifdef CONFIG_SMP
 	REG("sched_wake_up_idle",      S_IRUGO|S_IWUSR, proc_pid_sched_wake_up_idle_operations),
+	REG("sched_boost", S_IRUGO|S_IWUSR,  proc_task_boost_enabled_operations),
+	REG("sched_boost_period_ms", S_IRUGO|S_IWUSR, proc_task_boost_period_operations),
 #endif
 #ifdef CONFIG_SCHED_WALT
 	REG("sched_init_task_load",      S_IRUGO|S_IWUSR, proc_pid_sched_init_task_load_operations),
 	REG("sched_group_id",      S_IRUGO|S_IWUGO, proc_pid_sched_group_id_operations),
-	REG("sched_boost", S_IRUGO|S_IWUSR,  proc_task_boost_enabled_operations),
-	REG("sched_boost_period_ms", S_IRUGO|S_IWUSR, proc_task_boost_period_operations),
 #endif
 #ifdef CONFIG_SCHED_DEBUG
 	REG("sched",      S_IRUGO|S_IWUSR, proc_pid_sched_operations),
