@@ -1,48 +1,43 @@
-# AnyKernel2 Ramdisk Mod Script
+# AnyKernel3 Ramdisk Mod Script
 # osm0sis @ xda-developers
 
 ## AnyKernel setup
 # begin properties
-properties() {'
+properties() { '
 kernel.string=Simple Kernel by oipr @xda-developers
 do.devicecheck=1
 do.modules=0
 do.cleanup=1
+do.systemless=1
 do.cleanuponabort=0
 device.name1=beryllium
 device.name2=dipper
 device.name3=polaris
 supported.versions=10,10.0
-'} # end properties
+'; } # end properties
 
 # shell variables
 block=/dev/block/bootdevice/by-name/boot;
-is_slot_device=auto;
+is_slot_device=0;
 ramdisk_compression=auto;
-
-
-## AnyKernel methods (DO NOT CHANGE)
-# import patching functions/variables - see for reference
-. /tmp/anykernel/tools/ak2-core.sh;
 
 ## AnyKernel file attributes
 # set permissions/ownership for included ramdisk files
-chmod -R 750 $ramdisk/*;
-chown -R root:root $ramdisk/*;
+set_perm_recursive 0 0 755 644 $ramdisk/*;
+set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 
-LD_PATH=/system/lib
-if [ -d /system/lib64 ]; then
-  LD_PATH=/system/lib64
-fi
+## AnyKernel methods (DO NOT CHANGE)
+# import patching functions/variables - see for reference
+. tools/ak3-core.sh;
 
-exec_util() {
-  LD_LIBRARY_PATH=/system/lib64 $UTILS $1
-}
 
-set_con() {
-  exec_util "chcon -h u:object_r:"$1":s0 $2"
-  exec_util "chcon u:object_r:"$1":s0 $2"
-}
+## AnyKernel file attributes
+# set permissions/ownership for included ramdisk files
+set_perm_recursive 0 0 755 644 $ramdisk/*;
+set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
+
+## AnyKernel install
+dump_boot;
 
 ui_print "                                          "
 ui_print "  _________.__               .__          "
@@ -53,27 +48,8 @@ ui_print "/_______  /|__|__|_|  /   __/|____/\___  >"
 ui_print "        \/          \/|__|             \/ "
 ui_print "                                          "
 ui_print "$compatibility_string";
-
-## Trim partitions
-#ui_print " "
-#ui_print "Triming cache & data partitions..."
-#fstrim -v /cache;
-#fstrim -v /data;
-
-
 ui_print "Decompressing image kernel..."
-ui_print "This might take some seconds."
-## AnyKernel install
-dump_boot;
-
-# ramdisk patch
-
-umount /vendor || true
-mount -o rw /dev/block/bootdevice/by-name/vendor /vendor
-exec_util "cp -a /tmp/anykernel/ramdisk/init.simple.sh /vendor/bin/"
-set_con qti_init_shell_exec /vendor/bin/init.simple.sh
-umount /vendor || true
-# end ramdisk changes
+ui_print "This might take some time!"
 
 # Set magisk policy
 ui_print "Setting up magisk policy for SELinux...";
@@ -82,6 +58,5 @@ $bin/magiskpolicy --load sepolicy_debug --save sepolicy_debug "allow init rootfs
 
 ui_print "Regenerating image kernel and installing..."
 write_boot;
-
 ## end install
 
