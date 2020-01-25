@@ -154,3 +154,7 @@ config DRM_SDE_XLOG_DEBUG
 	default n
 	depends on DRM_MSM
 
+config FENCE_DEBUG
+	bool "Print fence name to userspace"
+	depends on DRM_MSM
+	default n

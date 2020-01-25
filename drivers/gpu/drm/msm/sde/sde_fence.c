@@ -92,7 +92,9 @@ uint32_t sde_sync_get_name_prefix(void *fence)
 struct sde_fence {
 	struct fence base;
 	struct sde_fence_context *ctx;
+#ifdef CONFIG_FENCE_DEBUG
 	char name[SDE_FENCE_NAME_SIZE];
+#endif
 	struct list_head	fence_list;
 	int fd;
 };
@@ -108,16 +110,24 @@ static inline struct sde_fence *to_sde_fence(struct fence *fence)
 
 static const char *sde_fence_get_driver_name(struct fence *fence)
 {
+#ifdef CONFIG_FENCE_DEBUG
 	struct sde_fence *f = to_sde_fence(fence);
 
 	return f->name;
+#else
+	return "sde";
+#endif
 }
 
 static const char *sde_fence_get_timeline_name(struct fence *fence)
 {
+#ifdef CONFIG_FENCE_DEBUG
 	struct sde_fence *f = to_sde_fence(fence);
 
 	return f->ctx->name;
+#else
+	return "timeline";
+#endif
 }
 
 static bool sde_fence_enable_signaling(struct fence *fence)
@@ -200,16 +210,20 @@ static int _sde_fence_create_fd(void *fence_ctx, uint32_t val)
 		return -ENOMEM;
 
 	sde_fence->ctx = fence_ctx;
+#ifdef CONFIG_FENCE_DEBUG
 	snprintf(sde_fence->name, SDE_FENCE_NAME_SIZE, "sde_fence:%s:%u",
 						sde_fence->ctx->name, val);
+#endif
 	fence_init(&sde_fence->base, &sde_fence_ops, &ctx->lock,
 		ctx->context, val);
 
 	/* create fd */
 	fd = get_unused_fd_flags(0);
 	if (fd < 0) {
+#ifdef CONFIG_FENCE_DEBUG
 		SDE_ERROR("failed to get_unused_fd_flags(), %s\n",
 							sde_fence->name);
+#endif
 		fence_put(&sde_fence->base);
 		goto exit;
 	}
@@ -219,7 +233,9 @@ static int _sde_fence_create_fd(void *fence_ctx, uint32_t val)
 	if (sync_file == NULL) {
 		put_unused_fd(fd);
 		fd = -EINVAL;
+#ifdef CONFIG_FENCE_DEBUG
 		SDE_ERROR("couldn't create fence, %s\n", sde_fence->name);
+#endif
 		fence_put(&sde_fence->base);
 		goto exit;
 	}
@@ -248,7 +264,9 @@ int sde_fence_init(struct sde_fence_context *ctx,
 
 	memset(ctx, 0, sizeof(*ctx));
 
+#ifdef CONFIG_FENCE_DEBUG
 	strlcpy(ctx->name, name, ARRAY_SIZE(ctx->name));
+#endif
 	ctx->drm_id = drm_id;
 	kref_init(&ctx->kref);
 	ctx->context = fence_context_alloc(1);
