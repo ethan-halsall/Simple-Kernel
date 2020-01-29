@@ -1364,9 +1364,6 @@ static int mhi_dev_abort(struct mhi_dev *mhi)
 	flush_workqueue(mhi->ring_init_wq);
 	flush_workqueue(mhi->pending_ring_wq);
 
-	/* Initiate MHI IPA reset */
-	ipa_mhi_destroy();
-
 	/* Clean up initialized channels */
 	rc = mhi_deinit(mhi);
 	if (rc) {
@@ -1974,6 +1971,7 @@ free_ereqs:
 	ch->ereqs = NULL;
 free_client:
 	kfree(*handle_client);
+	*handle_client = NULL;
 exit:
 	mutex_unlock(&ch->ch_lock);
 	return rc;
@@ -1984,6 +1982,11 @@ int mhi_dev_channel_isempty(struct mhi_dev_client *handle)
 {
 	struct mhi_dev_channel *ch;
 	int rc;
+
+	if (!handle) {
+		mhi_log(MHI_MSG_ERROR, "Invalid channel access\n");
+		return -EINVAL;
+	}
 
 	ch = handle->channel;
 	if (!ch)
@@ -2002,6 +2005,11 @@ void mhi_dev_close_channel(struct mhi_dev_client *handle)
 	if (!handle) {
 		mhi_log(MHI_MSG_ERROR, "Invalid channel access:%d\n", -ENODEV);
 		return;
+	}
+
+	if (!handle) {
+		mhi_log(MHI_MSG_ERROR, "Invalid channel access\n");
+		return -EINVAL;
 	}
 
 	ch = handle->channel;
