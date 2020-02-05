@@ -38,7 +38,6 @@
 #define MAX_NR_TRBS_PER_CHAN		9
 #define MHI_QTI_IFACE_ID		4
 #define MHI_ADPL_IFACE_ID		5
-#define MHI_CV2X_IFACE_ID		6
 #define DEVICE_NAME			"mhi"
 #define MAX_DEVICE_NAME_SIZE		80
 
@@ -88,8 +87,6 @@ struct chan_attr {
 	bool wr_cmpl;
 	/* Uevent broadcast of channel state */
 	bool state_bcast;
-	/* Skip node creation if not needed */
-	bool skip_node;
 	/* Number of write request structs to allocate */
 	u32 num_wr_reqs;
 
@@ -229,29 +226,6 @@ static const struct chan_attr uci_chan_attr_table[] = {
 		true
 	},
 	{
-		MHI_CLIENT_DCI_OUT,
-		TRB_MAX_DATA_SIZE,
-		MAX_NR_TRBS_PER_CHAN,
-		MHI_DIR_OUT,
-		NULL,
-		NULL,
-		NULL,
-		false,
-		true
-	},
-	{
-		MHI_CLIENT_DCI_IN,
-		TRB_MAX_DATA_SIZE,
-		MAX_NR_TRBS_PER_CHAN,
-		MHI_DIR_IN,
-		NULL,
-		NULL,
-		NULL,
-		false,
-		false,
-		true
-	},
-	{
 		MHI_CLIENT_DUN_OUT,
 		TRB_MAX_DATA_SIZE,
 		MAX_NR_TRBS_PER_CHAN,
@@ -270,10 +244,8 @@ static const struct chan_attr uci_chan_attr_table[] = {
 		mhi_uci_generic_client_cb,
 		NULL,
 		NULL,
-		NULL,
 		false,
-		false,
-		false,
+		true,
 		50
 	},
 	{
@@ -1716,29 +1688,6 @@ static long mhi_uci_client_ioctl(struct file *file, unsigned int cmd,
 			sizeof(epinfo));
 		if (rc)
 			uci_log(UCI_DBG_ERROR, "copying to user space failed");
-	} else if (cmd == MHI_UCI_CV2X_EP_LOOKUP) {
-		uci_log(UCI_DBG_DBG, "CV2X EP_LOOKUP for client:%d\n",
-						uci_handle->client_index);
-		epinfo.ph_ep_info.ep_type = DATA_EP_TYPE_PCIE;
-		epinfo.ph_ep_info.peripheral_iface_id = MHI_CV2X_IFACE_ID;
-		epinfo.ipa_ep_pair.cons_pipe_num =
-			ipa_get_ep_mapping(IPA_CLIENT_MHI2_PROD);
-		epinfo.ipa_ep_pair.prod_pipe_num =
-			ipa_get_ep_mapping(IPA_CLIENT_MHI2_CONS);
-
-		uci_log(UCI_DBG_DBG, "client:%d ep_type:%d intf:%d\n",
-			uci_handle->client_index,
-			epinfo.ph_ep_info.ep_type,
-			epinfo.ph_ep_info.peripheral_iface_id);
-
-		uci_log(UCI_DBG_DBG, "ipa_cons2_idx:%d ipa_prod2_idx:%d\n",
-			epinfo.ipa_ep_pair.cons_pipe_num,
-			epinfo.ipa_ep_pair.prod_pipe_num);
-
-		rc = copy_to_user((void __user *)arg, &epinfo,
-			sizeof(epinfo));
-		if (rc)
-			uci_log(UCI_DBG_ERROR, "copying to user space failed");
 	} else {
 		uci_log(UCI_DBG_ERROR, "wrong parameter:%d\n", cmd);
 		rc = -EINVAL;
@@ -2012,8 +1961,7 @@ int mhi_uci_init(void)
 		 * this client's channels is called by the MHI driver,
 		 * if one is registered.
 		 */
-		if (mhi_client->in_chan_attr->chan_state_cb ||
-				mhi_client->in_chan_attr->skip_node)
+		if (mhi_client->in_chan_attr->chan_state_cb)
 			continue;
 		ret_val = uci_device_create(mhi_client);
 		if (ret_val)
