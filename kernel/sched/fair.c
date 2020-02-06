@@ -6093,7 +6093,7 @@ select_idle_capacity(struct task_struct *p, struct sched_domain *sd, int target)
 	sync_entity_load_avg(&p->se);
 
 	cpus = this_cpu_cpumask_var_ptr(select_idle_mask);
-	cpumask_and(cpus, sched_domain_span(sd), p->cpus_ptr);
+	cpumask_and(cpus, sched_domain_span(sd), &p->cpus_allowed);
 
 	for_each_cpu_wrap(cpu, cpus, target) {
 		unsigned long cpu_cap = capacity_of(cpu);
