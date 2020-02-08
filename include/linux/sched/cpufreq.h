@@ -3,28 +3,6 @@
 
 #include <linux/types.h>
 
-static inline unsigned long task_rlimit(const struct task_struct *tsk,
-		unsigned int limit)
-{
-	return READ_ONCE(tsk->signal->rlim[limit].rlim_cur);
-}
-
-static inline unsigned long task_rlimit_max(const struct task_struct *tsk,
-		unsigned int limit)
-{
-	return READ_ONCE(tsk->signal->rlim[limit].rlim_max);
-}
-
-static inline unsigned long rlimit(unsigned int limit)
-{
-	return task_rlimit(current, limit);
-}
-
-static inline unsigned long rlimit_max(unsigned int limit)
-{
-	return task_rlimit_max(current, limit);
-}
-
 #define SCHED_CPUFREQ_RT	(1U << 0)
 #define SCHED_CPUFREQ_DL	(1U << 1)
 #define SCHED_CPUFREQ_IOWAIT	(1U << 2)
