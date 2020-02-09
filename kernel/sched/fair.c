@@ -5153,6 +5153,14 @@ static inline void hrtick_update(struct rq *rq)
 }
 #endif
 
+#ifdef CONFIG_SMP
+static unsigned long capacity_orig_of(int cpu);
+static unsigned long cpu_util(int cpu);
+static inline unsigned long boosted_cpu_util(int cpu);
+#else
+#define boosted_cpu_util(cpu) cpu_util_freq(cpu)
+#endif
+
 /*
  * The enqueue_task method is called before nr_running is
  * increased. Here we update the fair scheduling stats and
@@ -6558,10 +6566,10 @@ schedtune_task_margin(struct task_struct *p)
 
 #endif /* CONFIG_SCHED_TUNE */
 
-unsigned long
-boosted_cpu_util(int cpu, struct sched_walt_cpu_load *walt_load)
+static inline unsigned long
+boosted_cpu_util(int cpu)
 {
-	unsigned long util = cpu_util_freq(cpu, walt_load);
+	unsigned long util = cpu_util_freq(cpu, NULL);
 	long margin = schedtune_cpu_margin(util, cpu);
 
 	trace_sched_boost_cpu(cpu, util, margin);
