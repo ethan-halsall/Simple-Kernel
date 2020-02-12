@@ -6254,7 +6254,7 @@ int calc_total_energy(struct energy_env *eenv, struct sched_domain *sd,
 	int cpu_idx, cpu;
 
 	if (sched_feat(EAS_SIMPLIFIED_EM) && pd) {
-		for (cpu_idx = EAS_CPU_PRV; cpu_idx < eenv->max_cpu_count; ++cpu_idx) {
+		for (cpu_idx = EAS_CPU_PRV; cpu_idx < EAS_CPU_CNT; ++cpu_idx) {
 			cpu = eenv->cpu[cpu_idx].cpu_id;
 			if (cpu < 0)
 				continue;
@@ -6265,7 +6265,7 @@ int calc_total_energy(struct energy_env *eenv, struct sched_domain *sd,
 		struct sched_group *sg = sd->groups;
 		do {
 			/* Skip SGs which do not contains a candidate CPU */
-			if (!cpumask_intersects(&eenv->cpus_mask, sched_group_span(sg)))
+			if (!cpumask_intersects(&eenv->cpus_mask, sched_group_cpus(sg)))
 				continue;
 
 			eenv->sg_top = sg;
@@ -8079,6 +8079,12 @@ static unsigned long cpu_util_next(int cpu, struct task_struct *p, int dst_cpu)
 	return min_t(unsigned long, util, capacity_orig_of(cpu));
 }
 
+unsigned long sched_get_rt_rq_util(int cpu)
+{
+	struct rq *rq = cpu_rq(cpu);
+	return cpu_util_rt(rq);
+}
+
 /*
  * compute_energy_simplified(): Estimates the energy that would be consumed
  * if @p was migrated to @dst_cpu. compute_energy_simplified() predicts what
@@ -8106,8 +8112,7 @@ static long compute_energy_simplified(struct task_struct *p, int dst_cpu,
 		 */
 		for_each_cpu_and(cpu, perf_domain_span(pd), cpu_online_mask) {
 			util = cpu_util_next(cpu, p, dst_cpu);
-			/* XXX: 4.14 backport: mimic sugov */
-			util += cpu_util_rt(cpu);
+			util += sched_get_rt_rq_util(cpu);
 			max_util = max(util, max_util);
 			sum_util += util;
 		}

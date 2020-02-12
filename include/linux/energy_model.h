@@ -6,7 +6,6 @@
 #include <linux/kobject.h>
 #include <linux/rcupdate.h>
 #include <linux/sched/cpufreq.h>
-#include <linux/sched/topology.h>
 #include <linux/types.h>
 
 /**
