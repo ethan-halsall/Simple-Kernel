@@ -408,41 +408,39 @@ extern int sched_unisolate_cpu(int cpu);
 extern int sched_unisolate_cpu_unlocked(int cpu);
 #else
 static inline int sched_isolate_count(const cpumask_t *mask,
-				      bool include_offline)
+		      bool include_offline)
 {
-	cpumask_t count_mask;
+    cpumask_t count_mask;
 
-	if (include_offline)
-		cpumask_andnot(&count_mask, mask, cpu_online_mask);
-	else
-		return 0;
+    if (include_offline)
+	cpumask_andnot(&count_mask, mask, cpu_online_mask);
+    else
+	return 0;
 
-	return cpumask_weight(&count_mask);
+    return cpumask_weight(&count_mask);
 }
 
 static inline int sched_isolate_cpu(int cpu)
 {
-	return 0;
+    return 0;
 }
 
 static inline int sched_unisolate_cpu(int cpu)
 {
-	return 0;
+    return 0;
 }
 
 static inline int sched_unisolate_cpu_unlocked(int cpu)
 {
-	return 0;
+    return 0;
 }
-#endif
 
+#endif
 #if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
 extern void nohz_balance_enter_idle(int cpu);
-extern void set_cpu_sd_state_idle(void);
 extern int get_nohz_timer_target(void);
 #else
 static inline void nohz_balance_enter_idle(int cpu) { }
-static inline void set_cpu_sd_state_idle(void) { }
 #endif
 
 /*
@@ -1763,22 +1761,6 @@ struct task_struct {
 	int boost;
 	u64 boost_period;
     u64 boost_expires;
-#ifdef CONFIG_SCHED_WALT
-	struct ravg ravg;
-	/*
-	 * 'init_load_pct' represents the initial task load assigned to children
-	 * of this task
-	 */
-	u32 init_load_pct;
-	u64 last_wake_ts;
-	u64 last_switch_out_ts;
-	u64 last_enqueued_ts;
-	struct related_thread_group *grp;
-	struct list_head grp_list;
-	u64 cpu_cycles;
-	bool misfit;
-#endif
-
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
@@ -2796,18 +2778,6 @@ static inline int sched_update_freq_max_load(const cpumask_t *cpumask)
 	return 0;
 }
 
-#ifdef CONFIG_SCHED_WALT
-extern int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
-extern void sched_set_io_is_busy(int val);
-extern int sched_set_group_id(struct task_struct *p, unsigned int group_id);
-extern unsigned int sched_get_group_id(struct task_struct *p);
-extern int sched_set_init_task_load(struct task_struct *p, int init_load_pct);
-extern u32 sched_get_init_task_load(struct task_struct *p);
-extern void sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin,
-					  u32 fmax);
-extern int sched_set_boost(int enable);
-extern void free_task_load_ptrs(struct task_struct *p);
-#else
 static inline int
 register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb)
 {
@@ -2820,12 +2790,9 @@ static inline int sched_set_boost(int enable)
 	return -EINVAL;
 }
 static inline void free_task_load_ptrs(struct task_struct *p) { }
-#endif /* CONFIG_SCHED_WALT */
 
-#ifndef CONFIG_SCHED_WALT
 static inline void sched_update_cpu_freq_min_max(const cpumask_t *cpus,
 					u32 fmin, u32 fmax) { }
-#endif /* CONFIG_SCHED_WALT */
 
 #ifdef CONFIG_NO_HZ_COMMON
 void calc_load_enter_idle(void);
@@ -3000,6 +2967,7 @@ static inline int task_nice(const struct task_struct *p)
 extern int can_nice(const struct task_struct *p, const int nice);
 extern int task_curr(const struct task_struct *p);
 extern int idle_cpu(int cpu);
+extern int available_idle_cpu(int cpu);
 extern int sched_setscheduler(struct task_struct *, int,
 			      const struct sched_param *);
 extern int sched_setscheduler_nocheck(struct task_struct *, int,
@@ -3084,11 +3052,7 @@ extern void wake_up_new_task(struct task_struct *tsk);
 #endif
 extern int sched_fork(unsigned long clone_flags, struct task_struct *p);
 extern void sched_dead(struct task_struct *p);
-#ifdef CONFIG_SCHED_WALT
-extern void sched_exit(struct task_struct *p);
-#else
 static inline void sched_exit(struct task_struct *p) { }
-#endif
 
 
 extern void proc_caches_init(void);
@@ -3916,6 +3880,18 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
 #endif /* CONFIG_SMP */
 
 extern struct atomic_notifier_head load_alert_notifier_head;
+
+/*
+ * In order to reduce various lock holder preemption latencies provide an
+ * interface to see if a vCPU is currently running or not.
+ *
+ * This allows us to terminate optimistic spin loops and block, analogous to
+ * the native optimistic spin heuristic of testing if the lock owner task is
+ * running or not.
+ */
+#ifndef vcpu_is_preempted
+# define vcpu_is_preempted(cpu)		false
+#endif
 
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);

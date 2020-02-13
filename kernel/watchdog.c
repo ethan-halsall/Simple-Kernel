@@ -22,6 +22,7 @@
 #include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/workqueue.h>
+#include <linux/sched/isolation.h>
 
 #include <asm/irq_regs.h>
 #include <linux/kvm_para.h>
@@ -868,7 +869,8 @@ void __init lockup_detector_init(void)
 #ifdef CONFIG_NO_HZ_FULL
 	if (tick_nohz_full_enabled()) {
 		pr_info("Disabling watchdog on nohz_full cores by default\n");
-		cpumask_copy(&watchdog_cpumask, housekeeping_mask);
+		cpumask_copy(&watchdog_cpumask,
+			 housekeeping_cpumask(HK_FLAG_TIMER));
 	} else
 		cpumask_copy(&watchdog_cpumask, cpu_possible_mask);
 #else

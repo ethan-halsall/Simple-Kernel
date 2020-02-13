@@ -17,7 +17,6 @@
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
 #include "sched.h"
-#include "tune.h"
 #include <linux/cpuset.h>
 #include <linux/sched/cpufreq.h>
 
@@ -75,7 +74,6 @@ struct sugov_cpu {
 };
 
 static DEFINE_PER_CPU(struct sugov_cpu, sugov_cpu);
-static unsigned int stale_ns;
 static DEFINE_PER_CPU(struct sugov_tunables *, cached_tunables);
 
 /************************ Governor internals ***********************/
@@ -922,7 +920,6 @@ static int sugov_init(struct cpufreq_policy *policy)
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;
-	stale_ns = sched_ravg_window + (sched_ravg_window >> 3);
 
 	sugov_tunables_restore(policy);
 

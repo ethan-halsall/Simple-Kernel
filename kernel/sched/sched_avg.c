@@ -20,7 +20,6 @@
 #include <linux/math64.h>
 
 #include "sched.h"
-#include "walt.h"
 #include <trace/events/sched.h>
 
 static DEFINE_PER_CPU(u64, nr_prod_sum);
@@ -71,7 +70,6 @@ void sched_get_nr_running_avg(struct sched_avg_stats *stats)
 		tmp_nr = div64_u64((tmp_nr * 100), period);
 
 		tmp_misfit = per_cpu(nr_big_prod_sum, cpu);
-		tmp_misfit += walt_big_tasks(cpu) * diff;
 		tmp_misfit = div64_u64((tmp_misfit * 100), period);
 
 		/*
@@ -154,7 +152,6 @@ void sched_update_nr_prod(int cpu, long delta, bool inc)
 	update_last_busy_time(cpu, !inc, nr_running, curr_time);
 
 	per_cpu(nr_prod_sum, cpu) += nr_running * diff;
-	per_cpu(nr_big_prod_sum, cpu) += walt_big_tasks(cpu) * diff;
 	per_cpu(iowait_prod_sum, cpu) += nr_iowait_cpu(cpu) * diff;
 	spin_unlock_irqrestore(&per_cpu(nr_lock, cpu), flags);
 }
@@ -176,13 +173,6 @@ unsigned int sched_get_cpu_util(int cpu)
 	util = rq->cfs.avg.util_avg;
 	capacity = capacity_orig_of(cpu);
 
-#ifdef CONFIG_SCHED_WALT
-	if (!walt_disabled && sysctl_sched_use_walt_cpu_util) {
-		util = rq->prev_runnable_sum + rq->grp_time.prev_runnable_sum;
-		util = div64_u64(util,
-				 sched_ravg_window >> SCHED_CAPACITY_SHIFT);
-	}
-#endif
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
 	util = (util >= capacity) ? capacity : util;

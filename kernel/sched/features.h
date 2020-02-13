@@ -44,7 +44,7 @@ SCHED_FEAT(WAKEUP_PREEMPTION, true)
 
 SCHED_FEAT(HRTICK, false)
 SCHED_FEAT(DOUBLE_TICK, false)
-SCHED_FEAT(LB_BIAS, false)
+SCHED_FEAT(LB_BIAS, true)
 
 /*
  * Decrement CPU capacity based on time not spent running tasks
@@ -55,7 +55,7 @@ SCHED_FEAT(NONTASK_CAPACITY, true)
  * Queue remote wakeups on the target CPU and process them
  * using the scheduler IPI. Reduces rq->lock contention/bounces.
  */
-SCHED_FEAT(TTWU_QUEUE, true)
+SCHED_FEAT(TTWU_QUEUE, false)
 
 /*
  * When doing wakeups, attempt to limit superfluous scans of the LLC domain.
@@ -88,6 +88,7 @@ SCHED_FEAT(WA_BIAS, true)
  * UtilEstimation. Use estimated CPU utilization.
  */
 SCHED_FEAT(UTIL_EST, true)
+SCHED_FEAT(UTIL_EST_FASTUP, true)
 
 /*
  * Energy aware scheduling. Use platform energy model to guide scheduling
@@ -100,17 +101,9 @@ SCHED_FEAT(ENERGY_AWARE, false)
 #endif
 
 /*
- * Inflate the effective utilization of SchedTune-boosted tasks, which
- * generally leads to usage of higher frequencies.
- * If disabled, boosts will only bias tasks to higher-capacity CPUs.
+ * Fast pre-selection of CPU candidates for EAS.
  */
-SCHED_FEAT(SCHEDTUNE_BOOST_UTIL, false)
-
-/*
- * Use the Simplified Energy Model for EAS accounting only for
- * active costs of CPUs.
- */
-SCHED_FEAT(EAS_SIMPLIFIED_EM, true)
+SCHED_FEAT(FIND_BEST_TARGET, true)
 
 /*
  * Energy aware scheduling algorithm choices:
