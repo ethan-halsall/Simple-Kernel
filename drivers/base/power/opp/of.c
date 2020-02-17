@@ -34,10 +34,7 @@ static struct opp_table *_managed_opp(const struct device_node *np)
 			 * But the OPPs will be considered as shared only if the
 			 * OPP table contains a "opp-shared" property.
 			 */
-			if (opp_table->shared_opp == OPP_TABLE_ACCESS_SHARED)
-				return opp_table;
-
-			return NULL;
+			return opp_table->shared_opp ? opp_table : NULL;
 		}
 	}
 
@@ -71,18 +68,8 @@ static bool _opp_is_supported(struct device *dev, struct opp_table *opp_table,
 	u32 version;
 	int ret;
 
-	if (!opp_table->supported_hw) {
-		/*
-		 * In the case that no supported_hw has been set by the
-		 * platform but there is an opp-supported-hw value set for
-		 * an OPP then the OPP should not be enabled as there is
-		 * no way to see if the hardware supports it.
-		 */
-		if (of_find_property(np, "opp-supported-hw", NULL))
-			return false;
-		else
-			return true;
-	}
+	if (!opp_table->supported_hw)
+		return true;
 
 	while (count--) {
 		ret = of_property_read_u32_index(np, "opp-supported-hw", count,
@@ -348,7 +335,6 @@ static int _of_add_opp_table_v2(struct device *dev, struct device_node *opp_np)
 		if (ret) {
 			dev_err(dev, "%s: Failed to add OPP, %d\n", __func__,
 				ret);
-			of_node_put(np);
 			goto free_table;
 		}
 	}
@@ -367,10 +353,7 @@ static int _of_add_opp_table_v2(struct device *dev, struct device_node *opp_np)
 	}
 
 	opp_table->np = opp_np;
-	if (of_property_read_bool(opp_np, "opp-shared"))
-		opp_table->shared_opp = OPP_TABLE_ACCESS_SHARED;
-	else
-		opp_table->shared_opp = OPP_TABLE_ACCESS_EXCLUSIVE;
+	opp_table->shared_opp = of_property_read_bool(opp_np, "opp-shared");
 
 	mutex_unlock(&opp_table_lock);
 
@@ -387,7 +370,7 @@ static int _of_add_opp_table_v1(struct device *dev)
 {
 	const struct property *prop;
 	const __be32 *val;
-	int nr, ret;
+	int nr;
 
 	prop = of_find_property(dev->of_node, "operating-points", NULL);
 	if (!prop)
@@ -410,13 +393,9 @@ static int _of_add_opp_table_v1(struct device *dev)
 		unsigned long freq = be32_to_cpup(val++) * 1000;
 		unsigned long volt = be32_to_cpup(val++);
 
-		ret = _opp_add_v1(dev, freq, volt, false);
-		if (ret) {
-			dev_err(dev, "%s: Failed to add OPP %ld (%d)\n",
-				__func__, freq, ret);
-			dev_pm_opp_of_remove_table(dev);
-			return ret;
-		}
+		if (_opp_add_v1(dev, freq, volt, false))
+			dev_warn(dev, "%s: Failed to add OPP %ld\n",
+				 __func__, freq);
 		nr -= 2;
 	}
 

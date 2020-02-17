@@ -331,7 +331,7 @@ int dev_pm_opp_get_opp_count(struct device *dev)
 	opp_table = _find_opp_table(dev);
 	if (IS_ERR(opp_table)) {
 		count = PTR_ERR(opp_table);
-		dev_dbg(dev, "%s: OPP table not found (%d)\n",
+		dev_err(dev, "%s: OPP table not found (%d)\n",
 			__func__, count);
 		goto out_unlock;
 	}
@@ -402,22 +402,6 @@ struct dev_pm_opp *dev_pm_opp_find_freq_exact(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_find_freq_exact);
 
-static noinline struct dev_pm_opp *_find_freq_ceil(struct opp_table *opp_table,
-						   unsigned long *freq)
-{
-	struct dev_pm_opp *temp_opp, *opp = ERR_PTR(-ERANGE);
-
-	list_for_each_entry_rcu(temp_opp, &opp_table->opp_list, node) {
-		if (temp_opp->available && temp_opp->rate >= *freq) {
-			opp = temp_opp;
-			*freq = opp->rate;
-			break;
-		}
-	}
-
-	return opp;
-}
-
 /**
  * dev_pm_opp_find_freq_ceil() - Search for an rounded ceil freq
  * @dev:	device for which we do this operation
@@ -443,6 +427,7 @@ struct dev_pm_opp *dev_pm_opp_find_freq_ceil(struct device *dev,
 					     unsigned long *freq)
 {
 	struct opp_table *opp_table;
+	struct dev_pm_opp *temp_opp, *opp = ERR_PTR(-ERANGE);
 
 	opp_rcu_lockdep_assert();
 
@@ -455,7 +440,15 @@ struct dev_pm_opp *dev_pm_opp_find_freq_ceil(struct device *dev,
 	if (IS_ERR(opp_table))
 		return ERR_CAST(opp_table);
 
-	return _find_freq_ceil(opp_table, freq);
+	list_for_each_entry_rcu(temp_opp, &opp_table->opp_list, node) {
+		if (temp_opp->available && temp_opp->rate >= *freq) {
+			opp = temp_opp;
+			*freq = opp->rate;
+			break;
+		}
+	}
+
+	return opp;
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_find_freq_ceil);
 
@@ -584,7 +577,7 @@ int dev_pm_opp_set_rate(struct device *dev, unsigned long target_freq)
 	struct clk *clk;
 	unsigned long freq, old_freq;
 	unsigned long u_volt, u_volt_min, u_volt_max;
-	unsigned long old_u_volt, old_u_volt_min, old_u_volt_max;
+	unsigned long ou_volt, ou_volt_min, ou_volt_max;
 	int ret;
 
 	if (unlikely(!target_freq)) {
@@ -619,27 +612,23 @@ int dev_pm_opp_set_rate(struct device *dev, unsigned long target_freq)
 		return PTR_ERR(opp_table);
 	}
 
-	old_opp = _find_freq_ceil(opp_table, &old_freq);
-	if (IS_ERR(old_opp)) {
+	old_opp = dev_pm_opp_find_freq_ceil(dev, &old_freq);
+	if (!IS_ERR(old_opp)) {
+		ou_volt = old_opp->u_volt;
+		ou_volt_min = old_opp->u_volt_min;
+		ou_volt_max = old_opp->u_volt_max;
+	} else {
 		dev_err(dev, "%s: failed to find current OPP for freq %lu (%ld)\n",
 			__func__, old_freq, PTR_ERR(old_opp));
 	}
 
-	opp = _find_freq_ceil(opp_table, &freq);
+	opp = dev_pm_opp_find_freq_ceil(dev, &freq);
 	if (IS_ERR(opp)) {
 		ret = PTR_ERR(opp);
 		dev_err(dev, "%s: failed to find OPP for freq %lu (%d)\n",
 			__func__, freq, ret);
 		rcu_read_unlock();
 		return ret;
-	}
-
-	if (IS_ERR(old_opp)) {
-		old_u_volt = 0;
-	} else {
-		old_u_volt = old_opp->u_volt;
-		old_u_volt_min = old_opp->u_volt_min;
-		old_u_volt_max = old_opp->u_volt_max;
 	}
 
 	u_volt = opp->u_volt;
@@ -651,7 +640,7 @@ int dev_pm_opp_set_rate(struct device *dev, unsigned long target_freq)
 	rcu_read_unlock();
 
 	/* Scaling up? Scale voltage before frequency */
-	if (freq >= old_freq) {
+	if (freq > old_freq) {
 		ret = _set_opp_voltage(dev, reg, u_volt, u_volt_min,
 				       u_volt_max);
 		if (ret)
@@ -686,10 +675,8 @@ restore_freq:
 			__func__, old_freq);
 restore_voltage:
 	/* This shouldn't harm even if the voltages weren't updated earlier */
-	if (old_u_volt) {
-		_set_opp_voltage(dev, reg, old_u_volt, old_u_volt_min,
-				 old_u_volt_max);
-	}
+	if (!IS_ERR(old_opp))
+		_set_opp_voltage(dev, reg, ou_volt, ou_volt_min, ou_volt_max);
 
 	return ret;
 }
@@ -708,7 +695,7 @@ static void _remove_opp_dev(struct opp_device *opp_dev,
 			    struct opp_table *opp_table)
 {
 	opp_debug_unregister(opp_dev, opp_table);
-	list_del_rcu(&opp_dev->node);
+	list_del(&opp_dev->node);
 	call_srcu(&opp_table->srcu_head.srcu, &opp_dev->rcu_head,
 		  _kfree_opp_dev_rcu);
 }
@@ -1326,7 +1313,7 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_put_prop_name);
  * that this function is *NOT* called under RCU protection or in contexts where
  * mutex cannot be locked.
  */
-struct opp_table *dev_pm_opp_set_regulator(struct device *dev, const char *name)
+int dev_pm_opp_set_regulator(struct device *dev, const char *name)
 {
 	struct opp_table *opp_table;
 	struct regulator *reg;
@@ -1364,20 +1351,20 @@ struct opp_table *dev_pm_opp_set_regulator(struct device *dev, const char *name)
 	opp_table->regulator = reg;
 
 	mutex_unlock(&opp_table_lock);
-	return opp_table;
+	return 0;
 
 err:
 	_remove_opp_table(opp_table);
 unlock:
 	mutex_unlock(&opp_table_lock);
 
-	return ERR_PTR(ret);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_set_regulator);
 
 /**
  * dev_pm_opp_put_regulator() - Releases resources blocked for regulator
- * @opp_table: OPP table returned from dev_pm_opp_set_regulator().
+ * @dev: Device for which regulator was set.
  *
  * Locking: The internal opp_table and opp structures are RCU protected.
  * Hence this function internally uses RCU updater strategy with mutex locks
@@ -1385,12 +1372,22 @@ EXPORT_SYMBOL_GPL(dev_pm_opp_set_regulator);
  * that this function is *NOT* called under RCU protection or in contexts where
  * mutex cannot be locked.
  */
-void dev_pm_opp_put_regulator(struct opp_table *opp_table)
+void dev_pm_opp_put_regulator(struct device *dev)
 {
+	struct opp_table *opp_table;
+
 	mutex_lock(&opp_table_lock);
 
+	/* Check for existing table for 'dev' first */
+	opp_table = _find_opp_table(dev);
+	if (IS_ERR(opp_table)) {
+		dev_err(dev, "Failed to find opp_table: %ld\n",
+			PTR_ERR(opp_table));
+		goto unlock;
+	}
+
 	if (IS_ERR(opp_table->regulator)) {
-		pr_err("%s: Doesn't have regulator set\n", __func__);
+		dev_err(dev, "%s: Doesn't have regulator set\n", __func__);
 		goto unlock;
 	}
 

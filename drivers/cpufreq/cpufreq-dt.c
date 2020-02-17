@@ -28,7 +28,6 @@
 #include "cpufreq-dt.h"
 
 struct private_data {
-	struct opp_table *opp_table;
 	struct device *cpu_dev;
 	struct thermal_cooling_device *cdev;
 	const char *reg_name;
@@ -145,7 +144,6 @@ static int resources_available(void)
 static int cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *freq_table;
-	struct opp_table *opp_table = NULL;
 	struct private_data *priv;
 	struct device *cpu_dev;
 	struct clk *cpu_clk;
@@ -189,9 +187,8 @@ static int cpufreq_init(struct cpufreq_policy *policy)
 	 */
 	name = find_supply_name(cpu_dev);
 	if (name) {
-		opp_table = dev_pm_opp_set_regulator(cpu_dev, name);
-		if (IS_ERR(opp_table)) {
-			ret = PTR_ERR(opp_table);
+		ret = dev_pm_opp_set_regulator(cpu_dev, name);
+		if (ret) {
 			dev_err(cpu_dev, "Failed to set regulator for cpu%d: %d\n",
 				policy->cpu, ret);
 			goto out_put_clk;
@@ -300,7 +297,7 @@ out_free_opp:
 	kfree(priv);
 out_put_regulator:
 	if (name)
-		dev_pm_opp_put_regulator(opp_table);
+		dev_pm_opp_put_regulator(cpu_dev);
 out_put_clk:
 	clk_put(cpu_clk);
 
@@ -316,7 +313,7 @@ static int cpufreq_exit(struct cpufreq_policy *policy)
 	if (priv->have_static_opps)
 		dev_pm_opp_of_cpumask_remove_table(policy->related_cpus);
 	if (priv->reg_name)
-		dev_pm_opp_put_regulator(priv->opp_table);
+		dev_pm_opp_put_regulator(priv->cpu_dev);
 
 	clk_put(policy->clk);
 	kfree(priv);
