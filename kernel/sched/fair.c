@@ -8306,7 +8306,7 @@ check_cpu_capacity(struct rq *rq, struct sched_domain *sd)
 static inline int check_misfit_status(struct rq *rq, struct sched_domain *sd)
 {
 	return rq->misfit_task_load &&
-		(rq->cpu_capacity_orig < rq->rd->max_cpu_capacity ||
+		(rq->cpu_capacity_orig < rq->rd->max_cpu_capacity.val ||
 		 check_cpu_capacity(rq, sd));
 }
 
