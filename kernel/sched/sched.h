@@ -3,8 +3,8 @@
 #include <linux/sched/sysctl.h>
 #include <linux/sched/rt.h>
 #include <linux/sched/smt.h>
-#include <linux/sched/wake_q.h>
 #include <linux/sched/cpufreq.h>
+#include <linux/sched/wake_q.h>
 #include <linux/u64_stats_sync.h>
 #include <linux/sched/deadline.h>
 #include <linux/kernel_stat.h>
@@ -412,7 +412,7 @@ struct cfs_bandwidth { };
 struct cfs_rq {
 	struct load_weight load;
 	unsigned long runnable_weight;
-	unsigned int nr_running, h_nr_running, idle_h_nr_running;
+	unsigned int nr_running, h_nr_running;
 
 	u64 exec_clock;
 	u64 min_vruntime;
@@ -1850,7 +1850,7 @@ extern void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags);
 
 extern const_debug unsigned int sysctl_sched_time_avg;
 extern const_debug unsigned int sysctl_sched_nr_migrate;
-extern const_debug unsigned int sysctl_sched_migration_cost;
+extern unsigned int __read_mostly sysctl_sched_migration_cost;
 
 static inline u64 sched_avg_period(void)
 {
@@ -1913,6 +1913,17 @@ unsigned long arch_scale_min_freq_capacity(struct sched_domain *sd, int cpu)
 	 * 0, which represents an un-capped state
 	 */
 	return 0;
+}
+#endif
+
+#ifndef arch_scale_cpu_capacity
+static __always_inline
+unsigned long arch_scale_cpu_capacity(struct sched_domain *sd, int cpu)
+{
+	if (sd && (sd->flags & SD_SHARE_CPUCAPACITY) && (sd->span_weight > 1))
+		return sd->smt_gain / sd->span_weight;
+
+	return SCHED_CAPACITY_SCALE;
 }
 #endif
 
