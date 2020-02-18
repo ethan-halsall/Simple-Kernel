@@ -1871,7 +1871,6 @@ void sched_ttwu_pending(void)
 
 void scheduler_ipi(void)
 {
-	int cpu = smp_processor_id();
 
 	/*
 	 * Fold TIF_NEED_RESCHED into the preempt_count; anybody setting
@@ -5560,37 +5559,6 @@ static struct task_struct fake_task = {
 };
 
 /*
- * Remove a task from the runqueue and pretend that it's migrating. This
- * should prevent migrations for the detached task and disallow further
- * changes to tsk_cpus_allowed.
- */
-static void
-detach_one_task(struct task_struct *p, struct rq *rq, struct list_head *tasks)
-{
-	lockdep_assert_held(&rq->lock);
-
-	p->on_rq = TASK_ON_RQ_MIGRATING;
-	deactivate_task(rq, p, 0);
-	list_add(&p->se.group_node, tasks);
-}
-
-static void attach_tasks(struct list_head *tasks, struct rq *rq)
-{
-	struct task_struct *p;
-
-	lockdep_assert_held(&rq->lock);
-
-	while (!list_empty(tasks)) {
-		p = list_first_entry(tasks, struct task_struct, se.group_node);
-		list_del_init(&p->se.group_node);
-
-		BUG_ON(task_rq(p) != rq);
-		activate_task(rq, p, 0);
-		p->on_rq = TASK_ON_RQ_QUEUED;
-	}
-}
-
-/*
  * Migrate all tasks (not pinned if pinned argument say so) from the rq,
  * sleeping tasks will be migrated by try_to_wake_up()->select_task_rq().
  *
@@ -6652,7 +6620,6 @@ int sched_isolate_cpu(int cpu)
     struct rq *rq = cpu_rq(cpu);
     cpumask_t avail_cpus;
     int ret_code = 0;
-    u64 start_time = 0;
 
     cpu_maps_update_begin();
 
@@ -6716,7 +6683,6 @@ int sched_unisolate_cpu_unlocked(int cpu)
 {
     int ret_code = 0;
     struct rq *rq = cpu_rq(cpu);
-    u64 start_time = 0;
 
     if (!cpu_isolation_vote[cpu]) {
 	ret_code = -EINVAL;
