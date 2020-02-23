@@ -162,6 +162,7 @@ struct msm_geni_serial_port {
 	int edge_count;
 	bool manual_flow;
 	struct mutex ioctl_mutex;
+	struct msm_geni_serial_ver_info ver_info;
 	u32 cur_tx_remaining;
 };
 
