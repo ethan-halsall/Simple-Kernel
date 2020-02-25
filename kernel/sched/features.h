@@ -103,7 +103,7 @@ SCHED_FEAT(ENERGY_AWARE, false)
 /*
  * Fast pre-selection of CPU candidates for EAS.
  */
-SCHED_FEAT(FIND_BEST_TARGET, false)
+SCHED_FEAT(FIND_BEST_TARGET, true)
 
 /*
  * Energy aware scheduling algorithm choices:
