@@ -1789,31 +1789,6 @@ static inline int sched_tick_offload_init(void) { return 0; }
 static inline void sched_update_tick_dependency(struct rq *rq) { }
 #endif
 
-static inline void __add_nr_running(struct rq *rq, unsigned count)
-{
-	unsigned prev_nr = rq->nr_running;
-
-	sched_update_nr_prod(cpu_of(rq), count, true);
-	rq->nr_running = prev_nr + count;
-
-	if (prev_nr < 2 && rq->nr_running >= 2) {
-#ifdef CONFIG_SMP
-		if (!READ_ONCE(rq->rd->overload))
-			WRITE_ONCE(rq->rd->overload, 1);
-#endif
-	}
-
-	sched_update_tick_dependency(rq);
-}
-
-static inline void __sub_nr_running(struct rq *rq, unsigned count)
-{
-	sched_update_nr_prod(cpu_of(rq), count, false);
-	rq->nr_running -= count;
-	/* Check if we still need preemption */
-	sched_update_tick_dependency(rq);
-}
-
 #ifdef CONFIG_CPU_QUIET
 #define NR_AVE_SCALE(x)		((x) << FSHIFT)
 static inline u64 do_nr_running_integral(struct rq *rq)
@@ -1828,28 +1803,30 @@ static inline u64 do_nr_running_integral(struct rq *rq)
 
 	return nr_running_integral;
 }
+#endif
 
 static inline void add_nr_running(struct rq *rq, unsigned count)
 {
-	write_seqcount_begin(&rq->ave_seqcnt);
-	rq->nr_running_integral = do_nr_running_integral(rq);
-	rq->nr_last_stamp = rq->clock_task;
-	__add_nr_running(rq, count);
-	write_seqcount_end(&rq->ave_seqcnt);
+	unsigned prev_nr = rq->nr_running;
+
+	rq->nr_running = prev_nr + count;
+
+	if (prev_nr < 2 && rq->nr_running >= 2) {
+#ifdef CONFIG_SMP
+		if (!rq->rd->overload)
+			rq->rd->overload = true;
+#endif
+	}
+
+	sched_update_tick_dependency(rq);
 }
 
 static inline void sub_nr_running(struct rq *rq, unsigned count)
 {
-	write_seqcount_begin(&rq->ave_seqcnt);
-	rq->nr_running_integral = do_nr_running_integral(rq);
-	rq->nr_last_stamp = rq->clock_task;
-	__sub_nr_running(rq, count);
-	write_seqcount_end(&rq->ave_seqcnt);
+	rq->nr_running -= count;
+	/* Check if we still need preemption */
+	sched_update_tick_dependency(rq);
 }
-#else
-#define add_nr_running __add_nr_running
-#define sub_nr_running __sub_nr_running
-#endif
 
 static inline void rq_last_tick_reset(struct rq *rq)
 {
