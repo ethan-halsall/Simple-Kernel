@@ -103,8 +103,14 @@ static inline int __cpupri_find(struct cpupri *cp, struct task_struct *p,
 	return 1;
 }
 
+int cpupri_find(struct cpupri *cp, struct task_struct *p,
+		struct cpumask *lowest_mask)
+{
+	return cpupri_find_fitness(cp, p, lowest_mask, NULL);
+}
+
 /**
- * cpupri_find - find the best (lowest-pri) CPU in the system
+ * cpupri_find_fitness - find the best (lowest-pri) CPU in the system
  * @cp: The cpupri context
  * @p: The task
  * @lowest_mask: A mask to fill in with selected CPUs (or NULL)
@@ -118,8 +124,9 @@ static inline int __cpupri_find(struct cpupri *cp, struct task_struct *p,
  *
  * Return: (int)bool - CPUs were found
  */
-int cpupri_find(struct cpupri *cp, struct task_struct *p,
-		struct cpumask *lowest_mask)
+int cpupri_find_fitness(struct cpupri *cp, struct task_struct *p,
+		struct cpumask *lowest_mask,
+		bool (*fitness_fn)(struct task_struct *p, int cpu))
 {
 	int task_pri = convert_prio(p->prio);
 	int best_unfit_idx = -1;
