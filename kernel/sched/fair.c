@@ -55,8 +55,6 @@
 unsigned int sysctl_sched_latency			= 6000000ULL;
 unsigned int normalized_sysctl_sched_latency		= 6000000ULL;
 
-DEFINE_PER_CPU_READ_MOSTLY(int, sched_load_boost);
-
 /*
  * Enable/disable honoring sync flag in energy-aware wakeups.
  */

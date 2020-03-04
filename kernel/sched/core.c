@@ -6739,32 +6739,6 @@ int sched_rr_handler(struct ctl_table *table, int write,
 	return ret;
 }
 
-#ifdef CONFIG_PROC_SYSCTL
-int sched_updown_migrate_handler(struct ctl_table *table, int write,
-				 void __user *buffer, size_t *lenp,
-				 loff_t *ppos)
-{
-	int ret;
-	unsigned int *data = (unsigned int *)table->data;
-	unsigned int old_val;
-	static DEFINE_MUTEX(mutex);
-
-	mutex_lock(&mutex);
-	old_val = *data;
-
-	ret = proc_douintvec_capacity(table, write, buffer, lenp, ppos);
-
-	if (!ret && write &&
-	    sysctl_sched_capacity_margin > sysctl_sched_capacity_margin_down) {
-		ret = -EINVAL;
-		*data = old_val;
-	}
-	mutex_unlock(&mutex);
-
-	return ret;
-}
-#endif
-
 void threadgroup_change_begin(struct task_struct *tsk)
 {
 	might_sleep();
