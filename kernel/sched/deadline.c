@@ -834,7 +834,7 @@ update_dl_revised_wakeup(struct sched_dl_entity *dl_se, struct rq *rq)
 	 */
 	WARN_ON(dl_time_before(dl_se->deadline, rq_clock(rq)));
 
-	dl_se->runtime = (dl_se->dl_density * laxity) >> 20;
+	dl_se->runtime = (dl_se->dl_density * laxity) >> BW_SHIFT;
 }
 
 /*
@@ -1213,8 +1213,6 @@ static void update_curr_dl(struct rq *rq)
 
 	curr->se.exec_start = now;
 	cgroup_account_cputime(curr, delta_exec);
-
-	sched_rt_avg_update(rq, delta_exec);
 
 	if (dl_entity_is_special(dl_se))
 		return;
@@ -2126,9 +2124,14 @@ retry:
 	sub_rq_bw(&next_task->dl, &rq->dl);
 	set_task_cpu(next_task, later_rq->cpu);
 	add_rq_bw(&next_task->dl, &later_rq->dl);
+
+	/*
+	* Update the later_rq clock here, because the clock is used
+	* by the cpufreq_update_util() inside __add_running_bw().
+	*/
+	update_rq_clock(later_rq);
 	add_running_bw(&next_task->dl, &later_rq->dl);
-	activate_task(later_rq, next_task, 0);
-	next_task->on_rq = TASK_ON_RQ_QUEUED;
+	activate_task(later_rq, next_task, ENQUEUE_NOCLOCK);
 	ret = 1;
 
 	resched_curr(later_rq);
@@ -2214,7 +2217,6 @@ static void pull_dl_task(struct rq *this_rq)
 
 			resched = true;
 
-			p->on_rq = TASK_ON_RQ_MIGRATING;
 			deactivate_task(src_rq, p, 0);
 			sub_running_bw(&p->dl, &src_rq->dl);
 			sub_rq_bw(&p->dl, &src_rq->dl);
@@ -2222,7 +2224,6 @@ static void pull_dl_task(struct rq *this_rq)
 			add_rq_bw(&p->dl, &this_rq->dl);
 			add_running_bw(&p->dl, &this_rq->dl);
 			activate_task(this_rq, p, 0);
-			p->on_rq = TASK_ON_RQ_QUEUED;
 			dmin = p->dl.deadline;
 
 			/* Is there any other task even earlier? */
@@ -2329,9 +2330,17 @@ static void switched_from_dl(struct rq *rq, struct task_struct *p)
 	if (task_on_rq_queued(p) && p->dl.dl_runtime)
 		task_non_contending(p);
 
-	if (!task_on_rq_queued(p))
+	if (!task_on_rq_queued(p)) {
+		 /*
+		  * Inactive timer is armed. However, p is leaving DEADLINE and
+		  * might migrate away from this rq while continuing to run on
+		  * some other class. We need to remove its contribution from
+		  * this rq running_bw now, or sub_rq_bw (below) will complain.
+		  */
+		if (p->dl.dl_non_contending)
+			sub_running_bw(&p->dl, &rq->dl);
 		sub_rq_bw(&p->dl, &rq->dl);
-
+	}
 	/*
 	 * We cannot use inactive_task_timer() to invoke sub_running_bw()
 	 * at the 0-lag time, because the task could have been migrated
