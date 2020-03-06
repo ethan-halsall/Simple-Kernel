@@ -39,9 +39,6 @@
 
 #include "tiload.h"
 
-/* enable debug prints in the driver */
-#define DEBUG
-
 static struct cdev *tiload_cdev;
 static int tiload_major; /* Dynamic allocation of Mjr No. */
 static int tiload_opened; /* Dynamic allocation of Mjr No. */
@@ -107,9 +104,6 @@ static ssize_t tiload_read(struct file *filp, char __user *buf,
 	char reg_addr;
 	size_t size;
 	int ret = 0;
-#ifdef DEBUG
-	/* int i; */
-#endif
 
 	dev_info(pTAS2557->dev, "%s\n", __func__);
 	if (count > MAX_LENGTH) {
@@ -148,14 +142,6 @@ static ssize_t tiload_read(struct file *filp, char __user *buf,
 		dev_err(pTAS2557->dev, "%s, %d, ret=%d, count=%zu error happen!\n",
 			__func__, __LINE__, ret, count);
 
-#ifdef DEBUG
-	dev_info(pTAS2557->dev, "read size = %d, reg_addr= %x , count = %d\n",
-		(int) size, reg_addr, (int) count);
-/*	for (i = 0; i < (int) size; i++) {
-*		dev_dbg(pTAS2557->dev, "rd_data[%d]=%x\n", i, rd_data[i]);
-*	}
-*/
-#endif
 	if (size != count)
 		dev_err(pTAS2557->dev, "read %d registers from the codec\n", (int) size);
 
@@ -186,9 +172,6 @@ static ssize_t tiload_write(struct file *filp, const char __user *buf,
 	unsigned int nCompositeRegister = 0;
 	unsigned int nRegister;
 	int ret = 0;
-#ifdef DEBUG
-	/* int i; */
-#endif
 	dev_info(pTAS2557->dev, "%s\n", __func__);
 
 	if (count > MAX_LENGTH) {
@@ -210,13 +193,6 @@ static ssize_t tiload_write(struct file *filp, const char __user *buf,
 		kfree(wr_data);
 		return -EINVAL;
 	}
-#ifdef DEBUG
-	dev_info(pTAS2557->dev, "write size = %zu\n", count);
-/* for (i = 0; i < (int) count; i++) {
-*		dev_info(pTAS2557->dev, "wr_data[%d]=%x\n", i, wr_data[i]);
-*	}
-*/
-#endif
 	nRegister = wr_data[0];
 	size = count;
 	if ((nRegister == 127) && (gPage == 0)) {
