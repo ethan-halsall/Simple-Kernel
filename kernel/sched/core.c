@@ -2332,7 +2332,6 @@ static void __sched_fork(unsigned long clone_flags, struct task_struct *p)
 	init_dl_inactive_task_timer(&p->dl);
 	__dl_clear_params(p);
 
-	init_rt_schedtune_timer(&p->rt);
 	INIT_LIST_HEAD(&p->rt.run_list);
 	p->rt.timeout		= 0;
 	p->rt.time_slice	= sched_rr_timeslice;
@@ -6509,6 +6508,18 @@ void sched_move_task(struct task_struct *tsk)
 
 	task_rq_unlock(rq, tsk, &rf);
 }
+
+void threadgroup_change_begin(struct task_struct *tsk)
+{
+	might_sleep();
+	cgroup_threadgroup_change_begin(tsk);
+}
+
+void threadgroup_change_end(struct task_struct *tsk)
+{
+	cgroup_threadgroup_change_end(tsk);
+}
+
 
 inline struct task_group *css_tg(struct cgroup_subsys_state *css)
 {
