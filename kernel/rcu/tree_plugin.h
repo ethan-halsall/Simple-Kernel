@@ -2036,13 +2036,13 @@ static void nocb_gp_wait(struct rcu_data *my_rdp)
 	} else if (!needwait_gp) {
 		/* Wait for callbacks to appear. */
 		trace_rcu_nocb_wake(rcu_state.name, cpu, TPS("Sleep"));
-		swait_event_interruptible_exclusive(my_rdp->nocb_gp_wq,
+		swait_event_interruptible(my_rdp->nocb_gp_wq,
 				!READ_ONCE(my_rdp->nocb_gp_sleep));
 		trace_rcu_nocb_wake(rcu_state.name, cpu, TPS("EndSleep"));
 	} else {
 		rnp = my_rdp->mynode;
 		trace_rcu_this_gp(rnp, my_rdp, wait_gp_seq, TPS("StartWait"));
-		swait_event_interruptible_exclusive(
+		swait_event_interruptible(
 			rnp->nocb_gp_wq[rcu_seq_ctr(wait_gp_seq) & 0x1],
 			rcu_seq_done(&rnp->gp_seq, wait_gp_seq) ||
 			!READ_ONCE(my_rdp->nocb_gp_sleep));
@@ -2167,9 +2167,11 @@ static void do_nocb_deferred_wakeup_common(struct rcu_data *rdp)
 }
 
 /* Do a deferred wakeup of rcu_nocb_kthread() from a timer handler. */
-static void do_nocb_deferred_wakeup_timer(unsigned long x)
+static void do_nocb_deferred_wakeup_timer(struct timer_list *t)
 {
-	do_nocb_deferred_wakeup_common((struct rcu_data *)x);
+	struct rcu_data *rdp = from_timer(rdp, t, nocb_timer);
+
+	do_nocb_deferred_wakeup_common(rdp);
 }
 
 /*
