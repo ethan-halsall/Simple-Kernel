@@ -470,13 +470,8 @@ static void synchronize_sched_expedited_wait(void)
 	jiffies_start = jiffies;
 
 	for (;;) {
-<<<<<<< HEAD
 		ret = swait_event_timeout(
-				rsp->expedited_wq,
-=======
-		ret = swait_event_timeout_exclusive(
 				rcu_state.expedited_wq,
->>>>>>> 63d4c8c97948... rcu: Remove rsp parameter from expedited grace-period functions
 				sync_rcu_preempt_exp_done_unlocked(rnp_root),
 				jiffies_stall);
 		if (ret > 0 || sync_rcu_preempt_exp_done_unlocked(rnp_root))
