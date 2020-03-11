@@ -606,6 +606,10 @@ static void rcu_read_unlock_special(struct task_struct *t)
 	local_irq_save(flags);
 	irqs_were_disabled = irqs_disabled_flags(flags);
 	if (preempt_bh_were_disabled || irqs_were_disabled) {
+		bool exp;
+		struct rcu_data *rdp = this_cpu_ptr(&rcu_data);
+		struct rcu_node *rnp = rdp->mynode;
+
 		t->rcu_read_unlock_special.b.exp_hint = false;
 		exp = (t->rcu_blocked_node && t->rcu_blocked_node->exp_tasks) ||
 		      (rdp->grpmask & READ_ONCE(rnp->expmask)) ||
