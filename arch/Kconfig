@@ -86,7 +86,7 @@ config STATIC_KEYS_SELFTEST
 config OPTPROBES
 	def_bool y
 	depends on KPROBES && HAVE_OPTPROBES
-	select TASKS_RCU if PREEMPTION
+	depends on !PREEMPT
 
 config KPROBES_ON_FTRACE
 	def_bool y
