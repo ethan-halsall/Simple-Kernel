@@ -7,13 +7,23 @@
  *
  */
 
-#include <linux/sched/isolation.h>
 #include <linux/tick.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/static_key.h>
 #include <linux/ctype.h>
+#include <linux/cpumask.h>
 #include "sched.h"
+
+enum hk_flags {
+	HK_FLAG_TIMER		= 1,
+	HK_FLAG_RCU		= (1 << 1),
+	HK_FLAG_MISC		= (1 << 2),
+	HK_FLAG_SCHED		= (1 << 3),
+	HK_FLAG_TICK		= (1 << 4),
+	HK_FLAG_DOMAIN		= (1 << 5),
+	HK_FLAG_WQ		= (1 << 6),
+};
 
 DEFINE_STATIC_KEY_FALSE(housekeeping_overriden);
 EXPORT_SYMBOL_GPL(housekeeping_overriden);
