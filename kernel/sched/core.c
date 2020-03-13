@@ -3187,6 +3187,34 @@ void scheduler_tick(void)
 }
 
 #ifdef CONFIG_NO_HZ_FULL
+/**
+ * scheduler_tick_max_deferment
+ *
+ * Keep at least one tick per second when a single
+ * active task is running because the scheduler doesn't
+ * yet completely support full dynticks environment.
+ *
+ * This makes sure that uptime, CFS vruntime, load
+ * balancing, etc... continue to move forward, even
+ * with a very low granularity.
+ *
+ * Return: Maximum deferment in nanoseconds.
+ */
+u64 scheduler_tick_max_deferment(void)
+{
+	struct rq *rq = this_rq();
+	unsigned long next, now = READ_ONCE(jiffies);
+
+	next = rq->last_sched_tick + HZ;
+
+	if (time_before_eq(next, now))
+		return 0;
+
+	return jiffies_to_nsecs(next - now);
+}
+#endif
+
+#ifdef CONFIG_NO_HZ_FULL
 
 struct tick_work {
     int			cpu;
@@ -3269,7 +3297,7 @@ out_requeue:
      * to keep scheduler internal stats reasonably up to date.  But
      * first update state to reflect hotplug activity if required.
      */
-    os = atomic_fetch_add_unless(&twork->state, -1, TICK_SCHED_REMOTE_RUNNING);
+    os = __atomic_add_unless(&twork->state, -1, TICK_SCHED_REMOTE_RUNNING);
     WARN_ON_ONCE(os == TICK_SCHED_REMOTE_OFFLINE);
     if (os == TICK_SCHED_REMOTE_RUNNING)
 	queue_delayed_work(system_unbound_wq, dwork, HZ);
