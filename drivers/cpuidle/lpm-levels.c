@@ -36,8 +36,6 @@
 #include <linux/sched.h>
 #include <linux/cpu_pm.h>
 #include <linux/cpuhotplug.h>
-#include <linux/workqueue.h>
-#include <linux/msm_drm_notify.h>
 #include <soc/qcom/pm.h>
 #include <soc/qcom/event_timer.h>
 #include <soc/qcom/lpm_levels.h>
@@ -76,17 +74,6 @@ module_param(cluster_use_deepest_state, bool, 0664);
 
 static uint32_t bias_hyst;
 module_param_named(bias_hyst, bias_hyst, uint, 0664);
-
-static bool cluster_deepest_state_auto __read_mostly = false;
-module_param_named(cluster_deepest_state_auto, cluster_deepest_state_auto, bool,  0644);
-
-static short cluster_deepest_state_auto_timeout __read_mostly = 3000;
-module_param_named(cluster_deepest_state_auto_timeout, cluster_deepest_state_auto_timeout, short, 0644);
-
-static bool screen_on = true;
-
-static struct workqueue_struct *enforce_deepest_state_wq;
-static struct delayed_work enforce_deepest_state_work;
 
 struct lpm_history {
 	uint32_t resi[MAXSAMPLES];
@@ -1704,48 +1691,6 @@ static int lpm_suspend_enter(suspend_state_t state)
 	return 0;
 }
 
-static int msm_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
-{
-	struct msm_drm_notifier *evdata = data;
-	int *blank;
-
-	if (event != MSM_DRM_EVENT_BLANK)
-		return 0;
-
-	if (evdata->id != MSM_DRM_PRIMARY_DISPLAY)
-		return 0;
-
-	if (evdata && evdata->data) {
-		blank = evdata->data;
-		switch (*blank) {
-		case MSM_DRM_BLANK_POWERDOWN:
-			screen_on = false;
-			break;
-		case MSM_DRM_BLANK_UNBLANK:
-			screen_on = true;
-			// Disable deepest state immidiately after unblank
-			if (cluster_deepest_state_auto)
-				cluster_use_deepest_state = false;
-			break;
-		}
-	}
-
-	if (cluster_deepest_state_auto && !delayed_work_busy(&enforce_deepest_state_work) && !screen_on)
-		queue_delayed_work(enforce_deepest_state_wq, &enforce_deepest_state_work,
-			msecs_to_jiffies(cluster_deepest_state_auto_timeout));
-
-	return 0;
-}
-
-static struct notifier_block deepest_state_notifier_block = {
-	.notifier_call = msm_drm_notifier_callback,
-};
-
-static void set_deepest_state(struct work_struct *work)
-{
-	cluster_use_deepest_state = !screen_on;
-}
-
 static const struct platform_suspend_ops lpm_suspend_ops = {
 	.enter = lpm_suspend_enter,
 	.valid = suspend_valid_only_mem,
@@ -1866,21 +1811,4 @@ static int __init lpm_levels_module_init(void)
 
 	return rc;
 }
-
-static int  __init scheduled_cluster_deepest_state_init(void)
-{
-	enforce_deepest_state_wq = create_freezable_workqueue("enforce_deepest_state_wq");
-
-	if (!enforce_deepest_state_wq)
-		return -EFAULT;
-
-	INIT_DELAYED_WORK(&enforce_deepest_state_work, set_deepest_state);
-
-	msm_drm_register_client(&deepest_state_notifier_block);
-
-	return 0;
-}
-
-late_initcall(scheduled_cluster_deepest_state_init);
-
 late_initcall(lpm_levels_module_init);
