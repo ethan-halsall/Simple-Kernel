@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -45,9 +45,12 @@
 #define SCM_WDOG_DEBUG_BOOT_PART	0x9
 #define SCM_DLOAD_FULLDUMP		0X10
 #define SCM_EDLOAD_MODE			0X01
+#define SCM_EDLOAD_PCI_MODE		0X04
 #define SCM_DLOAD_CMD			0x10
 #define SCM_DLOAD_MINIDUMP		0X20
 #define SCM_DLOAD_BOTHDUMPS	(SCM_DLOAD_MINIDUMP | SCM_DLOAD_FULLDUMP)
+
+#define BOOT_CONFIG_SHIFT		3
 
 static int restart_mode;
 static void *restart_reason;
@@ -55,9 +58,11 @@ static bool scm_pmic_arbiter_disable_supported;
 static bool scm_deassert_ps_hold_supported;
 /* Download mode master kill-switch */
 static void __iomem *msm_ps_hold;
+static void __iomem *boot_config;
 static phys_addr_t tcsr_boot_misc_detect;
 static void scm_disable_sdi(void);
 static bool force_warm_reboot;
+static bool early_pcie_init_enable;
 
 #ifdef CONFIG_QCOM_DLOAD_MODE
 /* Runtime could be only changed value once.
@@ -186,7 +191,10 @@ static void enable_emergency_dload_mode(void)
 		mb();
 	}
 
-	ret = scm_set_dload_mode(SCM_EDLOAD_MODE, 0);
+	if (early_pcie_init_enable)
+		ret = scm_set_dload_mode(SCM_EDLOAD_PCI_MODE, 0);
+	else
+		ret = scm_set_dload_mode(SCM_EDLOAD_MODE, 0);
 	if (ret)
 		pr_err("Failed to set secure EDLOAD mode: %d\n", ret);
 }
@@ -578,6 +586,7 @@ static int msm_restart_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct resource *mem;
 	struct device_node *np;
+	uint32_t read_val;
 	int ret = 0;
 
 #ifdef CONFIG_QCOM_DLOAD_MODE
@@ -674,6 +683,22 @@ skip_sysfs_create:
 					   "tcsr-boot-misc-detect");
 	if (mem)
 		tcsr_boot_misc_detect = mem->start;
+
+
+	early_pcie_init_enable = 0;
+	mem = platform_get_resource_byname(pdev, IORESOURCE_MEM, "boot-config");
+	if (mem) {
+		boot_config = devm_ioremap_resource(dev, mem);
+		if (IS_ERR(boot_config)) {
+			pr_err("unable to ioremap boot config offset\n");
+			return PTR_ERR(boot_config);
+		}
+
+		read_val = __raw_readl(boot_config);
+
+		/* Bit 3 of the BOOT_CONFIG is used as the PCIe_EARLY_INIT_EN */
+		early_pcie_init_enable = (read_val >> BOOT_CONFIG_SHIFT) & 1;
+	}
 
 	pm_power_off = do_msm_poweroff;
 	arm_pm_restart = do_msm_restart;
