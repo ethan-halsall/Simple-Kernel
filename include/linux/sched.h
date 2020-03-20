@@ -3593,17 +3593,6 @@ static __always_inline bool need_resched(void)
 void thread_group_cputime(struct task_struct *tsk, struct task_cputime *times);
 void thread_group_cputimer(struct task_struct *tsk, struct task_cputime *times);
 
-static inline void thread_group_cputime_t(struct task_struct *tsk,
-					  struct task_cputime_t *cputime)
-{
-	struct task_cputime times;
-
-	thread_group_cputime(tsk, &times);
-	cputime->utime = nsecs_to_cputime(times.utime);
-	cputime->stime = nsecs_to_cputime(times.stime);
-	cputime->sum_exec_runtime = times.sum_exec_runtime;
-}
-
 /*
  * Reevaluate whether the task has signals pending delivery.
  * Wake the task if so.
