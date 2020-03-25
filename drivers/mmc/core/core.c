@@ -597,7 +597,7 @@ static int mmc_devfreq_set_target(struct device *dev,
 rel_host:
 	mmc_release_host(host);
 out:
-	tsk_restore_flags(current, pflags, PF_MEMALLOC);
+	current_restore_flags(pflags, PF_MEMALLOC);
 	return err;
 }
 
