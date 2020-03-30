@@ -4,7 +4,6 @@
  * policies)
  */
 #include "sched.h"
-
 #include "pelt.h"
 
 int sched_rr_timeslice = RR_TIMESLICE;
@@ -357,7 +356,7 @@ static DEFINE_PER_CPU(struct callback_head, rt_pull_head);
 static void push_rt_tasks(struct rq *);
 static void pull_rt_task(struct rq *);
 
-static inline void queue_push_tasks(struct rq *rq)
+static inline void rt_queue_push_tasks(struct rq *rq)
 {
 	if (!has_pushable_tasks(rq))
 		return;
@@ -365,7 +364,7 @@ static inline void queue_push_tasks(struct rq *rq)
 	queue_balance_callback(rq, &per_cpu(rt_push_head, rq->cpu), push_rt_tasks);
 }
 
-static inline void queue_pull_task(struct rq *rq)
+static inline void rt_queue_pull_task(struct rq *rq)
 {
 	queue_balance_callback(rq, &per_cpu(rt_pull_head, rq->cpu), pull_rt_task);
 }
@@ -423,7 +422,7 @@ static inline void pull_rt_task(struct rq *this_rq)
 {
 }
 
-static inline void queue_push_tasks(struct rq *rq)
+static inline void rt_queue_push_tasks(struct rq *rq)
 {
 }
 #endif /* CONFIG_SMP */
@@ -1398,10 +1397,9 @@ static int
 select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 		  int sibling_count_hint)
 {
-	struct task_struct *curr, *tgt_task;
+	struct task_struct *curr;
 	struct rq *rq;
 	bool test;
-	bool may_not_preempt;
 
 	/* For anything but wake ups, just return the task_cpu */
 	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
@@ -1434,58 +1432,25 @@ select_task_rq_rt(struct task_struct *p, int cpu, int sd_flag, int flags,
 	 * This test is optimistic, if we get it wrong the load-balancer
 	 * will have to sort it out.
 	 */
-	may_not_preempt = task_may_not_preempt(curr, cpu);
 	test = curr &&
 	       unlikely(rt_task(curr)) &&
 	       (curr->nr_cpus_allowed < 2 || curr->prio <= p->prio);
 
-	if (test || may_not_preempt || !rt_task_fits_capacity(p, cpu)) {
+	if (test || !rt_task_fits_capacity(p, cpu)) {
 		int target = find_lowest_rq(p);
-
-		/*
-		 * Check once for losing a race with the other core's irq
-		 * handler. This does not happen frequently, but it can avoid
-		 * delaying the execution of the RT task in those cases.
-		 */
-		if (target != -1) {
-			tgt_task = READ_ONCE(cpu_rq(target)->curr);
-			if (task_may_not_preempt(tgt_task, target))
-				target = find_lowest_rq(p);
-		}
 
 		/*
 		 * Don't bother moving it if the destination CPU is
 		 * not running a lower priority task.
 		 */
 		if (target != -1 &&
-		    (may_not_preempt ||
-		    p->prio < cpu_rq(target)->rt.highest_prio.curr))
+		    p->prio < cpu_rq(target)->rt.highest_prio.curr)
 			cpu = target;
 	}
 	rcu_read_unlock();
 
 out:
 	return cpu;
-}
-/*
- * Return whether the task on the given cpu is currently non-preemptible
- * while handling a potentially long softint, or if the task is likely
- * to block preemptions soon because (a) it is a ksoftirq thread that is
- * handling slow softints, (b) it is idle and therefore likely to start
- * processing the irq's immediately, (c) the cpu is currently handling
- * hard irq's and will soon move on to the softirq handler.
- */
-bool
-task_may_not_preempt(struct task_struct *task, int cpu)
-{
-	__u32 softirqs = per_cpu(active_softirqs, cpu) |
-		 __IRQ_STAT(cpu, __softirq_pending);
-	struct task_struct *cpu_ksoftirqd = per_cpu(ksoftirqd, cpu);
-
-	return ((softirqs & LONG_SOFTIRQ_MASK) &&
-		(task == cpu_ksoftirqd || is_idle_task(task) ||
-		(task_thread_info(task)->preempt_count
-		    & (HARDIRQ_MASK | SOFTIRQ_MASK))));
 }
 
 static void check_preempt_equal_prio(struct rq *rq, struct task_struct *p)
@@ -1623,7 +1588,7 @@ pick_next_task_rt(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	/* The running task is never eligible for pushing */
 	dequeue_pushable_task(rq, p);
 
-	queue_push_tasks(rq);
+	rt_queue_push_tasks(rq);
 
 	/*
 	 * If prev task was rt, put_prev_task() has already updated the
@@ -2253,7 +2218,7 @@ static void switched_from_rt(struct rq *rq, struct task_struct *p)
 	if (!task_on_rq_queued(p) || rq->rt.rt_nr_running)
 		return;
 
-	queue_pull_task(rq);
+	rt_queue_pull_task(rq);
 }
 
 void __init init_sched_rt_class(void)
@@ -2308,7 +2273,7 @@ prio_changed_rt(struct rq *rq, struct task_struct *p, int oldprio)
 		 * may need to pull tasks to this runqueue.
 		 */
 		if (oldprio < p->prio)
-			queue_pull_task(rq);
+			rt_queue_pull_task(rq);
 
 		/*
 		 * If there's a higher priority task waiting to run
