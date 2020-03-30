@@ -1796,15 +1796,33 @@ static int cam_ife_mgr_config_hw(void *hw_mgr_priv,
 		if (cfg->init_packet) {
 			rc = wait_for_completion_timeout(
 				&ctx->config_done_complete,
-				msecs_to_jiffies(30));
+				msecs_to_jiffies(300));
 			if (rc <= 0) {
 				CAM_ERR(CAM_ISP,
-					"config done completion timeout for req_id=%llu rc=%d ctx_index %d",
-					cfg->request_id, rc, ctx->ctx_index);
-				if (rc == 0)
+					"config timeout, Submit to CDM again");
+
+				rc = cam_cdm_submit_bls(ctx->cdm_handle, cdm_cmd);
+				if (rc) {
+					CAM_ERR(CAM_ISP, "Failed to apply the configs");
+					return rc;
+				}
+
+				rc = wait_for_completion_timeout(
+					&ctx->config_done_complete,
+					msecs_to_jiffies(300));
+				if (rc <= 0) {
+					CAM_ERR(CAM_ISP,
+						"config timeout for req_id=%llu ctx_index %d",
+						cfg->request_id, ctx->ctx_index);
 					rc = -ETIMEDOUT;
+				} else {
+					rc = 0;
+				}
 			} else {
 				rc = 0;
+			}
+
+			if (rc == 0) {
 				CAM_DBG(CAM_ISP,
 					"config done Success for req_id=%llu ctx_index %d",
 					cfg->request_id, ctx->ctx_index);
