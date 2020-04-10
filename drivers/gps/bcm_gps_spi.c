@@ -1,6 +1,6 @@
 /*************************************************************************
  * Copyright (C) 2015 Broadcom Corporation
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -29,12 +29,9 @@
 #include <linux/of_gpio.h>
 #include <linux/poll.h>
 #include <linux/uaccess.h>
-
 #include <linux/suspend.h>
 #include <linux/kernel.h>
-
 #include <linux/gpio.h>
-
 #include <linux/miscdevice.h>
 #include <linux/time.h>
 #include <linux/io.h>
@@ -42,9 +39,6 @@
 #include <linux/kernel_stat.h>
 #include <linux/pm_runtime.h>
 #include <linux/spi/spi-geni-qcom.h>
-
-
-
 #include "bbd.h"
 
 #define WORD_BURST_SIZE			4
@@ -94,8 +88,6 @@
 
 #define DEBUG_TIME_STAT
 #define CONFIG_TRANSFER_STAT
-
-
 #define CONFIG_PACKET_RECEIVED (31*1024)
 
 bool ssi_dbg = true;
@@ -104,18 +96,11 @@ bool ssi_dbg_rng = true;
 
 
 int  g_bcm_bitrate = 12000;
-
 int  ssi_mode = 1;
-
 int  ssi_len = 2;
 int  ssi_fc = 3;
-
-
 int  ssi_tx_fail = 1;
-
-
 int  ssi_tx_fc_retries = 1;
-
 int  ssi_tx_fc_retry_errors = 1;
 
 
@@ -138,15 +123,14 @@ struct bcm_spi_transfer_stat  {
 } __attribute__((__packed__));
 #endif
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               Structures
+//
+//--------------------------------------------------------------
 
 #define BCM_SPI_READ_BUF_SIZE	(8*PAGE_SIZE)
 #define BCM_SPI_WRITE_BUF_SIZE	(8*PAGE_SIZE)
-
 
 #define MIN_SPI_FRAME_LEN 254
 #define MAX_SPI_FRAME_LEN (BCM_SPI_READ_BUF_SIZE / 2)
@@ -192,7 +176,6 @@ struct bcm_spi_priv  {
 	struct workqueue_struct *serial_wq;
 	atomic_t suspending;
 
-
 	/* SPI tx/rx buf */
 	struct bcm_ssi_tx_frame *tx_buf;
 	struct bcm_ssi_rx_frame *rx_buf;
@@ -201,10 +184,6 @@ struct bcm_spi_priv  {
 	struct bcm_spi_strm_protocol tx_strm;
 	struct bcm_spi_strm_protocol rx_strm;
 
-
-#ifdef CONFIG_TRANSFER_STAT
-	struct bcm_spi_transfer_stat trans_stat[2];
-#endif
 	struct pinctrl *ts_pinctrl;
 	struct pinctrl_state *gpio_state_active;
 	struct pinctrl_state *gpio_state_suspend;
@@ -253,82 +232,27 @@ static ssize_t bcm_4775_nstandby_store(struct device *dev,
 
 static DEVICE_ATTR(nstandby, 0660,
 	   bcm_4775_nstandby_show, bcm_4775_nstandby_store);
-
-static void bcm_ssi_clear_trans_stat(struct bcm_spi_priv *priv)
-{
-	memset(priv->trans_stat, 0, sizeof(priv->trans_stat));
-}
-
-static void bcm_ssi_print_trans_stat(struct bcm_spi_priv *priv)
-{
-	return;
-	/*char buf[512];
-	char *p = buf;
-
-	struct bcm_spi_transfer_stat *trans = &priv->trans_stat[0];
-	p = buf;
-
-	p += snprintf(p, sizeof(buf),
-				 "SSPBBD TX:<255B=%d <1K=%d,<8K=%d,<32K=%d,<64K=%d",
-				 trans->len_255, trans->len_1K, trans->len_8K,
-				 trans->len_32K, trans->len_64K);
-	//pr_info("%s\n",buf);
-
-	trans = &priv->trans_stat[1];
-	p = buf;
-	p += snprintf(p, sizeof(buf),
-				 "SSPBBD:RX: <255B=%d,<1K=%d,<8K=%d,<32K=%d,<64K=%d",
-				 trans->len_255, trans->len_1K,
-				 trans->len_8K, trans->len_32K, trans->len_64K);
-
-	//pr_info("%s\n",buf);
-
-	if (priv->tx_strm.ctrl_byte & SSI_FLOW_CONTROL_ENABLED) {
-		p = buf;
-		p += snprintf(p, sizeof(buf),
-					 "SSPBBD fail=%d,retries=%d,retry errors=%d",
-					 ssi_tx_fail-1,
-					 ssi_tx_fc_retries-1,
-					 ssi_tx_fc_retry_errors-1);
-		//pr_info("%s\n",buf);
-	}*/
-}
-
-static void bcm_ssi_calc_trans_stat(struct bcm_spi_transfer_stat *trans,
-		unsigned short length)
-{
-	if (length <=  255)
-		trans->len_255++;
-	else if (length <=  1024)
-		trans->len_1K++;
-	else if (length <= (8*1024))
-		trans->len_8K++;
-	else if (length <= (32*1024))
-		trans->len_32K++;
-	else
-		trans->len_64K++;
-}
 #endif
 
 unsigned long m_ulRxBufferBlockSize[4] = {32, 256, 1024 * 2, 1024 * 16};
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               File Operations
+//
+//--------------------------------------------------------------
 static int bcm_spi_open(struct inode *inode, struct file *filp)
 {
 	/* Initially, */
 	struct bcm_spi_priv *priv = container_of(filp->private_data,
 						struct bcm_spi_priv, misc);
 	struct bcm_spi_strm_protocol *strm;
-	unsigned long int flags;
+	unsigned long flags;
 	unsigned char fc_mask, len_mask, duplex_mask;
+	//char buf[512];
+	//char *p = buf;
 
-
-
-
+	//pr_info("%s++\n", __func__);
 
 	if (priv->busy)
 		return -EBUSY;
@@ -366,13 +290,13 @@ static int bcm_spi_open(struct inode *inode, struct file *filp)
 	} else if (ssi_mode == 0) {
 		strm->pckt_len = 0;
 	}
-	strm->ctrl_len = strm->pckt_len + strm->fc_len + 1;
+	strm->ctrl_len = strm->pckt_len + strm->fc_len + 1; // 1 for tx cmd byte
 
 	strm->frame_len = ssi_len == 2 ? MAX_SPI_FRAME_LEN : MIN_SPI_FRAME_LEN;
 	strm->ctrl_byte = duplex_mask | SSI_MODE_STREAM
 					| len_mask | SSI_WRITE_TRANS | fc_mask;
 
-
+	// TX SPI Streaming Protocol in details
 	/*p = buf;
 	snprintf(p, sizeof(buf),
 			"[SSPBBD]: tx ctrl %02X: total %d = len %d + fc %d + cmd 1",
@@ -392,7 +316,7 @@ static int bcm_spi_open(struct inode *inode, struct file *filp)
 					  (ssi_mode == SSI_MODE_FULL_DUPLEX ?
 					  SSI_WRITE_TRANS : SSI_READ_TRANS);
 
-
+	// RX SPI Streaming Protocol in details
 	/*p = buf;
 	snprintf(p, sizeof(buf),
 			"[SSPBBD]: rx ctrl %02X: total %d = len %d + fc %d + stat 1",
@@ -419,9 +343,6 @@ static int bcm_spi_open(struct inode *inode, struct file *filp)
 		//pr_info("%s\n",buf);*/
 	}
 
-#ifdef CONFIG_TRANSFER_STAT
-	bcm_ssi_clear_trans_stat(priv);
-#endif
 	ssi_tx_fail       = 1;
 	ssi_tx_fc_retries = 1;
 	ssi_tx_fc_retry_errors = 1;
@@ -433,14 +354,9 @@ static int bcm_spi_open(struct inode *inode, struct file *filp)
 static int bcm_spi_release(struct inode *inode, struct file *filp)
 {
 	struct bcm_spi_priv *priv = filp->private_data;
-	unsigned long int flags;
-
+	unsigned long flags;
 
 	priv->busy = false;
-
-#ifdef CONFIG_TRANSFER_STAT
-	bcm_ssi_print_trans_stat(priv);
-#endif
 
 	/* Disable irq */
 	spin_lock_irqsave(&priv->irq_lock, flags);
@@ -450,7 +366,6 @@ static int bcm_spi_release(struct inode *inode, struct file *filp)
 	spin_unlock_irqrestore(&priv->irq_lock, flags);
 
 	disable_irq_wake(priv->spi->irq);
-
 
 	return 0;
 }
@@ -462,8 +377,6 @@ static ssize_t bcm_spi_read(struct file *filp, char __user *buf,
 	struct bcm_spi_priv *priv = filp->private_data;
 	struct circ_buf *circ = &priv->read_buf;
 	size_t rd_size = 0;
-
-
 
 	mutex_lock(&priv->rlock);
 
@@ -486,8 +399,6 @@ static ssize_t bcm_spi_read(struct file *filp, char __user *buf,
 			CIRC_CNT(circ->head, circ->tail,
 			BCM_SPI_READ_BUF_SIZE));
 	mutex_unlock(&priv->rlock);
-
-
 	return rd_size;
 }
 
@@ -500,8 +411,6 @@ static ssize_t bcm_spi_write(struct file *filp, const char __user *buf,
 	size_t wr_size = 0;
 	bool rxtx_work_run = true;
 
-
-
 	mutex_lock(&priv->wlock);
 	/* Copy from user into circ buffer
 	 * We may require 2 copies from [tail..end] and [end..head]
@@ -511,7 +420,6 @@ static ssize_t bcm_spi_write(struct file *filp, const char __user *buf,
 							circ->tail,
 							BCM_SPI_WRITE_BUF_SIZE);
 		size_t copied = min(space_to_end, size);
-
 
 		WARN_ON(copy_from_user((void *) circ->buf + circ->head,
 								buf +
@@ -525,13 +433,12 @@ static ssize_t bcm_spi_write(struct file *filp, const char __user *buf,
 
 	mutex_unlock(&priv->wlock);
 
-
-
 	/* kick start rxtx thread */
 	/* we don't want to queue work in suspending and shutdown */
 	if (!atomic_read(&priv->suspending)) {
 		/* Disable irq */
-		unsigned long int flags;
+		unsigned long flags;
+
 		spin_lock_irqsave(&priv->irq_lock, flags);
 		if (atomic_xchg(&priv->irq_enabled, 0))
 			disable_irq_nosync(priv->spi->irq);
@@ -540,11 +447,8 @@ static ssize_t bcm_spi_write(struct file *filp, const char __user *buf,
 
 		spin_unlock_irqrestore(&priv->irq_lock, flags);
 
-		if (rxtx_work_run == true) {
-
+		if (rxtx_work_run == true)
 			queue_work(priv->serial_wq, &(priv->rxtx_work));
-
-		}
 	}
 	return wr_size;
 }
@@ -579,11 +483,11 @@ static const struct file_operations bcm_spi_fops = {
 
 
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               Misc. functions
+//
+//--------------------------------------------------------------
 
 
 /*
@@ -626,11 +530,11 @@ static void bcm477x_bye(struct bcm_spi_priv *priv)
 	gpio_set_value(priv->mcu_req, 0);
 }
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               SSI tx/rx functions
+//
+//--------------------------------------------------------------
 
 static unsigned short bcm_ssi_get_len(unsigned char ctrl_byte,
 						unsigned char *data)
@@ -683,9 +587,7 @@ static int bcm_spi_sync(struct bcm_spi_priv *priv, void *tx_buf,
 	xfer.rx_buf = rx_buf;
 
 	/* Sync */
-
 	ret = spi_sync(msg.spi, &msg);
-
 
 	if (ret)
 		pr_err("[SSPBBD} spi_sync error, return=%d\n", ret);
@@ -751,24 +653,16 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 			/* Call BBD */
 			if (bytes_to_write != 0)
 				bbd_parse_asic_data(data_p, Nread, NULL, priv);
-
-#ifdef CONFIG_TRANSFER_STAT
-			bcm_ssi_calc_trans_stat(&priv->trans_stat[1],
-			Mwrite+Nread);
-#endif
 		}
-
 
 		if (strm->fc_len != 0) {
 			Bwritten = bcm_ssi_get_len(strm->ctrl_byte,
 			&rx->data[strm->pckt_len + Mwrite]);
 
 			if (Mwrite != Bwritten) {
-
 				ssi_tx_fc_retries++;
 
 				if (Mwrite < Bwritten) {
-
 					ssi_tx_fc_retry_errors++;
 					pr_err("[SSPBBD]: %s @ FC error %d\n",
 						__func__,
@@ -788,11 +682,6 @@ static int bcm_ssi_tx(struct bcm_spi_priv *priv, int length)
 		}
 
 	} while (--retry_ctr > 0);
-
-#ifdef CONFIG_TRANSFER_STAT
-	bcm_ssi_calc_trans_stat(&priv->trans_stat[0], length);
-#endif
-
 	return ret;
 }
 
@@ -804,13 +693,6 @@ static int bcm_ssi_rx(struct bcm_spi_priv *priv, size_t *length)
 	int fail = -1;
 	unsigned short ctrl_len = strm->pckt_len+1;
 	unsigned short payload_len;
-
-
-#ifdef CONFIG_TRANSFER_STAT
-	bcm_ssi_calc_trans_stat(&priv->trans_stat[1], *length);
-#endif
-
-
 
 	bcm_ssi_clr_len(strm->ctrl_byte, tx->data);
 	tx->cmd = strm->ctrl_byte;
@@ -828,8 +710,6 @@ static int bcm_ssi_rx(struct bcm_spi_priv *priv, size_t *length)
 
 	payload_len = bcm_ssi_get_len(strm->ctrl_byte, rx->data);
 
-
-
 	if (payload_len == 0) {
 		payload_len = MIN_SPI_FRAME_LEN;
 		pr_err("[SSPBBD] rx->len is still read to 0. set %d\n",
@@ -838,7 +718,6 @@ static int bcm_ssi_rx(struct bcm_spi_priv *priv, size_t *length)
 
 	/* TODO: limit max payload to 254 because of exynos3 bug */
 	{
-
 		*length = min((unsigned short)(strm->frame_len-ctrl_len),
 		payload_len);
 		memset(tx->data, 0, *length + ctrl_len - 1);
@@ -858,22 +737,16 @@ static int bcm_ssi_rx(struct bcm_spi_priv *priv, size_t *length)
 	if (payload_len < *length)
 		*length = payload_len;
 
-#ifdef CONFIG_TRANSFER_STAT
-	bcm_ssi_calc_trans_stat(&priv->trans_stat[1], *length);
-#endif
-
 	return 0;
 }
 
-void bcm_on_packet_received(void *_priv, unsigned char *data,
-							unsigned int size)
+void bcm_on_packet_received(void *_priv, unsigned char
+						*data, size_t size)
 {
 	struct bcm_spi_priv *priv = (struct bcm_spi_priv *)_priv;
 	struct circ_buf *rd_circ = &priv->read_buf;
 	size_t written = 0, avail = size;
 
-
-	/* Copy into circ buffer */
 	mutex_lock(&priv->rlock);
 	do {
 		size_t space_to_end = CIRC_SPACE_TO_END(rd_circ->head,
@@ -907,13 +780,9 @@ static void bcm_start_tx_work(struct work_struct *work)
 
 	spin_lock(&priv->irq_lock);
 
-
-
-
 	queue_work(priv->serial_wq, &priv->rxtx_work);
 
 	spin_unlock(&priv->irq_lock);
-
 }
 
 
@@ -931,8 +800,6 @@ static void bcm_rxtx_work(struct work_struct *work)
 		return;
 	}
 
-
-
 	do {
 		int    ret;
 		size_t avail = 0;
@@ -940,14 +807,11 @@ static void bcm_rxtx_work(struct work_struct *work)
 		/* Read first */
 		ret = gpio_get_value(priv->host_req);
 
-
-
 		if (ret) {
 			/* Receive SSI frame */
 			if (bcm_ssi_rx(priv, &avail))
 				break;
 			/* Call BBD */
-
 			bbd_parse_asic_data(priv->rx_buf->data +
 				rx_pckt_len, avail, NULL, priv);
 		}
@@ -955,8 +819,6 @@ static void bcm_rxtx_work(struct work_struct *work)
 		/* Next, write */
 		avail = CIRC_CNT(wr_circ->head,
 			wr_circ->tail, BCM_SPI_WRITE_BUF_SIZE);
-
-
 
 		if (avail) {
 			size_t written = 0;
@@ -984,7 +846,6 @@ static void bcm_rxtx_work(struct work_struct *work)
 				(BCM_SPI_WRITE_BUF_SIZE-1);
 			} while (avail > 0);
 
-
 			/* Transmit SSI frame */
 			ret = bcm_ssi_tx(priv, written);
 			mutex_unlock(&priv->wlock);
@@ -1003,7 +864,7 @@ static void bcm_rxtx_work(struct work_struct *work)
 
 	/* Enable irq */
 	{
-		unsigned long int flags;
+		unsigned long flags;
 
 		spin_lock_irqsave(&priv->irq_lock, flags);
 
@@ -1014,16 +875,14 @@ static void bcm_rxtx_work(struct work_struct *work)
 
 		spin_unlock_irqrestore(&priv->irq_lock, flags);
 	}
-
-
 }
 
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               IRQ Handler
+//
+//--------------------------------------------------------------
 static irqreturn_t bcm_irq_handler(int irq, void *pdata)
 {
 	struct bcm_spi_priv *priv =
@@ -1039,10 +898,8 @@ static irqreturn_t bcm_irq_handler(int irq, void *pdata)
 	spin_unlock(&priv->irq_lock);
 
 	/* we don't want to queue work in suspending and shutdown */
-	if (!atomic_read(&priv->suspending)) {
-
+	if (!atomic_read(&priv->suspending))
 		queue_work(priv->serial_wq, &priv->rxtx_work);
-	}
 
 	return IRQ_HANDLED;
 }
@@ -1105,17 +962,17 @@ static int gps_pinctrl_select(struct bcm_spi_priv *data, bool on)
 
 
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               SPI driver operations
+//
+//--------------------------------------------------------------
 static int bcm_spi_suspend(struct device *dev, pm_message_t state)
 {
 	struct spi_device *spi = to_spi_device(dev);
 	struct bcm_spi_priv *priv = (struct bcm_spi_priv *)
 		spi_get_drvdata(spi);
-	unsigned long int flags;
+	unsigned long flags;
 
 	atomic_set(&priv->suspending, 1);
 	/* Disable irq */
@@ -1132,7 +989,7 @@ static int bcm_spi_resume(struct device *dev)
 	struct spi_device *spi = to_spi_device(dev);
 	struct bcm_spi_priv *priv = (struct bcm_spi_priv *)
 		spi_get_drvdata(spi);
-	unsigned long int flags;
+	unsigned long flags;
 
 	atomic_set(&priv->suspending, 0);
 
@@ -1148,7 +1005,7 @@ static void bcm_spi_shutdown(struct spi_device *spi)
 {
 	struct bcm_spi_priv *priv = (struct bcm_spi_priv *)
 		spi_get_drvdata(spi);
-	unsigned long int flags;
+	unsigned long flags;
 
 	atomic_set(&priv->suspending, 1);
 	/* Disable irq */
@@ -1169,17 +1026,12 @@ static int bcm_spi_probe(struct spi_device *spi)
 	bool legacy_patch = false;
 	int ret;
 	int error = 0;
-	pr_err("[SSPBBD]: Check platform_data for bcm device\n");
 
 	/* Check GPIO# */
-#ifndef CONFIG_OF
-
-#else
 	if (!spi->dev.of_node) {
 		pr_err("[SSPBBD]: Failed to find of_node\n");
 		goto err_exit;
 	}
-#endif
 
 	host_req = of_get_named_gpio(spi->dev.of_node, "ssp-host-req", 0);
 	mcu_req  = of_get_named_gpio(spi->dev.of_node, "ssp-mcu-req", 0);
@@ -1320,7 +1172,6 @@ static int bcm_spi_probe(struct spi_device *spi)
 	mutex_init(&priv->rlock);
 	mutex_init(&priv->wlock);
 
-
 	priv->busy = false;
 
 	/* Init - work */
@@ -1337,9 +1188,6 @@ static int bcm_spi_probe(struct spi_device *spi)
 	priv->mcu_req  = mcu_req;
 	priv->mcu_resp = mcu_resp;
 	priv->nstandby = nstandby;
-
-	/* Init - etc */
-
 
 	g_bcm_gps = priv;
 	/* Init BBD & SSP */
@@ -1368,9 +1216,7 @@ static int bcm_spi_remove(struct spi_device *spi)
 {
 	struct bcm_spi_priv *priv = (struct bcm_spi_priv *)
 		spi_get_drvdata(spi);
-	unsigned long int flags;
-
-
+	unsigned long flags;
 
 	atomic_set(&priv->suspending, 1);
 
@@ -1390,7 +1236,6 @@ static int bcm_spi_remove(struct spi_device *spi)
 	}
 
 	/* Free everything */
-
 	free_irq(spi->irq, priv);
 	device_remove_file(&priv->spi->dev, &dev_attr_nstandby);
 	kfree(priv->tx_buf);
@@ -1447,11 +1292,11 @@ static struct spi_driver bcm_spi_driver = {
 };
 
 
-
-
-
-
-
+//--------------------------------------------------------------
+//
+//               Module init/exit
+//
+//--------------------------------------------------------------
 static int __init bcm_spi_init(void)
 {
 	return spi_register_driver(&bcm_spi_driver);

@@ -1,6 +1,6 @@
 /*
  * Copyright 2015 Broadcom Corporation
- * Copyright (C) 2018 XiaoMi, Inc.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
@@ -26,8 +26,6 @@
 
 #pragma pack(4)
 
-#include <linux/types.h>
-
 union long_union_t {
 	unsigned char uc[sizeof(unsigned long)];
 	unsigned long ul;
@@ -39,14 +37,11 @@ union short_union_t {
 };
 #pragma pack()
 
-
-#define BBD_DEVICE_MAJOR	240
 enum {
 	BBD_MINOR_SHMD	    = 0,
 	BBD_MINOR_SENSOR    = 1,
 	BBD_MINOR_CONTROL   = 2,
 	BBD_MINOR_PATCH     = 3,
-
 	BBD_DEVICE_INDEX
 };
 
@@ -70,7 +65,6 @@ enum {
 #define BBD_CTRL_SSI_PATCH_END		"SSI:PatchEnd"
 #define GPSD_SENSOR_ON		"GPSD:SENSOR_ON"
 #define GPSD_SENSOR_OFF		"GPSD:SENSOR_OFF"
-
 
 #define HSI_RNGDMA_RX_BASE_ADDR       0x40104040
 #define HSI_RNGDMA_RX_SW_ADDR_OFFSET  0x40104050
@@ -100,9 +94,8 @@ extern void bbd_parse_asic_data(unsigned char *pucData,
 					unsigned short len,
 					void *priv),
 					void *priv);
+extern void bcm_on_packet_received(void *_priv, unsigned char
+					*data, size_t size);
 
-
-#ifdef CONFIG_BCM_GPS_SPI_DRIVER
 extern void bcm477x_debug_info(const char *buf);
-#endif
 #endif /* __BBD_H__ */
