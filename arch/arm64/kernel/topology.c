@@ -36,6 +36,14 @@
  * rebalance_domains for all idle cores and the cpu_power can be updated
  * during this sequence.
  */
+
+DECLARE_PER_CPU(unsigned long, thermal_pressure);
+
+unsigned long topology_get_thermal_pressure(int cpu)
+{
+	return per_cpu(thermal_pressure, cpu);
+}
+
 static DEFINE_PER_CPU(unsigned long, cpu_scale) = SCHED_CAPACITY_SCALE;
 
 unsigned long arch_scale_freq_power(struct sched_domain *sd, int cpu)
@@ -471,6 +479,18 @@ static void update_siblings_masks(unsigned int cpuid)
 			cpumask_set_cpu(cpu, &cpuid_topo->thread_sibling);
 	}
 }
+
+DEFINE_PER_CPU(unsigned long, thermal_pressure);
+
+void arch_set_thermal_pressure(struct cpumask *cpus,
+	           unsigned long th_pressure)
+{
+	int cpu;
+
+	for_each_cpu(cpu, cpus)
+		WRITE_ONCE(per_cpu(thermal_pressure, cpu), th_pressure);
+}
+
 
 void store_cpu_topology(unsigned int cpuid)
 {
