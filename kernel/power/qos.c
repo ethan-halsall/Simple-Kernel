@@ -262,19 +262,17 @@ static inline int pm_qos_set_value_for_cpus(struct pm_qos_constraints *c,
  * pm_qos_update_target - manages the constraints list and calls the notifiers
  *  if needed
  * @c: constraints data struct
- * @req: request to add to the list, to update or to remove
+ * @node: request to add to the list, to update or to remove
  * @action: action to take on the constraints list
  * @value: value of the request to add or update
  *
  * This function returns 1 if the aggregated constraint value has changed, 0
  *  otherwise.
  */
-int pm_qos_update_target(struct pm_qos_constraints *c,
-				struct pm_qos_request *req,
-				enum pm_qos_req_action action, int value)
+int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
+			 enum pm_qos_req_action action, int value)
 {
 	int prev_value, curr_value, new_value;
-	struct plist_node *node = &req->node;
 	struct cpumask cpus;
 	int ret;
 
@@ -461,7 +459,7 @@ static void __pm_qos_update_request(struct pm_qos_request *req,
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
 			pm_qos_array[req->pm_qos_class]->constraints,
-			req, PM_QOS_UPDATE_REQ, new_value);
+			&req->node, PM_QOS_UPDATE_REQ, new_value);
 }
 
 /**
@@ -493,7 +491,7 @@ static void pm_qos_irq_release(struct kref *ref)
 	cpumask_setall(&req->cpus_affine);
 	spin_unlock(&pm_qos_lock);
 
-	pm_qos_update_target(c, req, PM_QOS_UPDATE_REQ, c->default_value);
+	pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ, c->default_value);
 }
 
 static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
@@ -517,7 +515,7 @@ static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
 	spin_unlock(&pm_qos_lock);
 
 	if (affinity_changed)
-		pm_qos_update_target(c, req, PM_QOS_UPDATE_REQ,
+		pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ,
 				     req->node.prio);
 }
 #endif
@@ -598,7 +596,7 @@ void pm_qos_add_request(struct pm_qos_request *req,
 	INIT_DELAYED_WORK(&req->work, pm_qos_work_fn);
 	trace_pm_qos_add_request(pm_qos_class, value);
 	pm_qos_update_target(pm_qos_array[pm_qos_class]->constraints,
-			     req, PM_QOS_ADD_REQ, value);
+			     &req->node, PM_QOS_ADD_REQ, value);
 
 #ifdef CONFIG_SMP
 	if (req->type == PM_QOS_REQ_AFFINE_IRQ &&
@@ -613,9 +611,9 @@ void pm_qos_add_request(struct pm_qos_request *req,
 			cpumask_setall(&req->cpus_affine);
 			pm_qos_update_target(
 				pm_qos_array[pm_qos_class]->constraints,
-				req, PM_QOS_UPDATE_REQ, value);
-		}
+				&req->node, PM_QOS_UPDATE_REQ, value);
 	}
+    }
 #endif
 }
 EXPORT_SYMBOL_GPL(pm_qos_add_request);
@@ -670,7 +668,7 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
 			pm_qos_array[req->pm_qos_class]->constraints,
-			req, PM_QOS_UPDATE_REQ, new_value);
+			&req->node, PM_QOS_UPDATE_REQ, new_value);
 
 	schedule_delayed_work(&req->work, usecs_to_jiffies(timeout_us));
 }
@@ -708,7 +706,7 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 
 	trace_pm_qos_remove_request(req->pm_qos_class, PM_QOS_DEFAULT_VALUE);
 	pm_qos_update_target(pm_qos_array[req->pm_qos_class]->constraints,
-			     req, PM_QOS_REMOVE_REQ,
+			     &req->node, PM_QOS_REMOVE_REQ,
 			     PM_QOS_DEFAULT_VALUE);
 	memset(req, 0, sizeof(*req));
 }

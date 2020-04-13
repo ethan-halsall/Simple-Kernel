@@ -153,11 +153,11 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 			value = 0;
 
 		ret = pm_qos_update_target(&qos->resume_latency,
-					   &req->data.lat, action, value);
+					   &req->data.pnode, action, value);
 		break;
 	case DEV_PM_QOS_LATENCY_TOLERANCE:
 		ret = pm_qos_update_target(&qos->latency_tolerance,
-					   &req->data.lat, action, value);
+					   &req->data.pnode, action, value);
 		if (ret) {
 			value = pm_qos_read_value(&qos->latency_tolerance);
 			req->dev->power.set_latency_tolerance(req->dev, value);
@@ -258,7 +258,7 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 
 	/* Flush the constraints lists for the device. */
 	c = &qos->resume_latency;
-	plist_for_each_entry_safe(req, tmp, &c->list, data.lat.node) {
+	plist_for_each_entry_safe(req, tmp, &c->list, data.pnode) {
 		/*
 		 * Update constraints list and call the notification
 		 * callbacks if needed
@@ -268,7 +268,7 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	}
 
 	c = &qos->latency_tolerance;
-	plist_for_each_entry_safe(req, tmp, &c->list, data.lat.node) {
+	plist_for_each_entry_safe(req, tmp, &c->list, data.pnode) {
 		apply_constraint(req, PM_QOS_REMOVE_REQ, PM_QOS_DEFAULT_VALUE);
 		memset(req, 0, sizeof(*req));
 	}
@@ -384,7 +384,7 @@ static int __dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 	switch(req->type) {
 	case DEV_PM_QOS_RESUME_LATENCY:
 	case DEV_PM_QOS_LATENCY_TOLERANCE:
-		curr_value = req->data.lat.node.prio;
+		curr_value = req->data.pnode.prio;
 		break;
 	case DEV_PM_QOS_FLAGS:
 		curr_value = req->data.flr.flags;
@@ -834,7 +834,7 @@ s32 dev_pm_qos_get_user_latency_tolerance(struct device *dev)
 	ret = IS_ERR_OR_NULL(dev->power.qos)
 		|| !dev->power.qos->latency_tolerance_req ?
 			PM_QOS_LATENCY_TOLERANCE_NO_CONSTRAINT :
-			dev->power.qos->latency_tolerance_req->data.lat.node.prio;
+			dev->power.qos->latency_tolerance_req->data.pnode.prio;
 	mutex_unlock(&dev_pm_qos_mtx);
 	return ret;
 }
