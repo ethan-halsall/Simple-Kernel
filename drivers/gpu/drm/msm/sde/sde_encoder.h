@@ -277,6 +277,6 @@ int sde_encoder_get_ctlstart_timeout_state(struct drm_encoder *enc);
  * sde_encoder_trigger_early_wakeup - trigger early wake up
  * @drm_enc:    Pointer to drm encoder structure
  */
-void sde_encoder_trigger_early_wakeup(struct drm_encoder *drm_enc);
-
+void sde_encoder_trigger_early_wakeup(struct drm_encoder *drm_enc,
+				struct msm_drm_private *priv);
 #endif /* __SDE_ENCODER_H__ */

@@ -5427,12 +5427,21 @@ void sde_encoder_phys_destroy_cdm(struct sde_encoder_phys *phys_enc)
 }
 
 
-void sde_encoder_trigger_early_wakeup(struct drm_encoder *drm_enc)
+void sde_encoder_trigger_early_wakeup(struct drm_encoder *drm_enc,
+				struct msm_drm_private *priv)
 {
-	struct sde_encoder_virt *sde_enc = NULL;
-	struct msm_drm_private *priv = NULL;
+	struct sde_encoder_virt *sde_enc;
 
-	priv = drm_enc->dev->dev_private;
+	if (!drm_enc) {
+		SDE_ERROR("invalid encoder\n");
+		return;
+	}
+
+	if (!priv) {
+		SDE_ERROR("invalid private\n");
+		return;
+	}
+
 	sde_enc = to_sde_encoder_virt(drm_enc);
 	if (!sde_enc->crtc || (sde_enc->crtc->index
 			>= ARRAY_SIZE(priv->disp_thread))) {
@@ -5444,11 +5453,7 @@ void sde_encoder_trigger_early_wakeup(struct drm_encoder *drm_enc)
 	}
 
 	SDE_ATRACE_BEGIN("sde_encoder_resource_control");
-	if (sde_enc->rc_state == SDE_ENC_RC_STATE_IDLE) {
-		sde_encoder_resource_control(drm_enc,
-					     SDE_ENC_RC_EVENT_EARLY_WAKEUP);
-
-	}
+	sde_encoder_resource_control(drm_enc,
+				     SDE_ENC_RC_EVENT_EARLY_WAKEUP);
 	SDE_ATRACE_END("sde_encoder_resource_control");
-
 }
