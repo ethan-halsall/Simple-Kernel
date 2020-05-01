@@ -113,7 +113,7 @@ int sl_eeprom_parse_memory_map(struct device_node *node,
 		goto ERROR;
 	}
 	data->map = map;
-	for (i = 0; i < data->num_map; i++) {
+	for (i = 0; i < data->num_map; i ++){
 		CAM_DBG(CAM_SL_EEPROM,
 			"sl_eeprom_parse_memory_map saddr 0X%4x\n",
 			data->map[i].saddr);

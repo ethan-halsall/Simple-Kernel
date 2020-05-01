@@ -9,7 +9,7 @@
 #include "3dsl_eeprom_soc.h"
 #include "3dsl_eeprom_core.h"
 #include "cam_debug_util.h"
-struct sl_eeprom_ctrl_t       *g_e_ctrl = NULL;
+struct sl_eeprom_ctrl_t       *g_e_ctrl;
 
 /**
  * sl_eeprom_subdev_ioctl - ioctl  func
@@ -101,7 +101,7 @@ int32_t sl_eeprom_update_i2c_info(struct sl_eeprom_ctrl_t *e_ctrl,
 static int sl_eeprom_init_subdev(struct sl_eeprom_ctrl_t *e_ctrl)
 {
 	int rc = 0;
-	strlcpy(e_ctrl->dev_info.device_name, CAM_SL_EEPROM_NAME,
+	strlcpy(e_ctrl->dev_info.device_name, SL_EEPROM_NAME,
 		sizeof(e_ctrl->dev_info.device_name));
 	strlcpy(e_ctrl->dev_info.class_name, DL_CLASS_NAME,
 		sizeof(e_ctrl->dev_info.class_name));
@@ -110,13 +110,13 @@ static int sl_eeprom_init_subdev(struct sl_eeprom_ctrl_t *e_ctrl)
 		CAM_ERR(CAM_SL_EEPROM,  "Failed to create class.\n");
 		rc = -EINVAL;
 	}
-	rc = alloc_chrdev_region(&e_ctrl->dev_info.dev_num, 0, 1, CAM_SL_EEPROM_NAME);
+	rc = alloc_chrdev_region(&e_ctrl->dev_info.dev_num, 0, 1, SL_EEPROM_NAME);
 	if (rc < 0) {
 		CAM_ERR(CAM_SL_EEPROM,  "Failed to allocate chrdev region\n");
 		rc = -EINVAL;
 	}
-	e_ctrl->dev_info.chr_dev = device_create(e_ctrl->dev_info.chr_class, NULL,
-					e_ctrl->dev_info.dev_num, e_ctrl, CAM_SL_EEPROM_NAME);
+	e_ctrl->dev_info.chr_dev= device_create(e_ctrl->dev_info.chr_class, NULL,
+					e_ctrl->dev_info.dev_num, e_ctrl, SL_EEPROM_NAME);
 	if (IS_ERR(e_ctrl->dev_info.chr_dev)) {
 		CAM_ERR(CAM_SL_EEPROM, "Failed to create char device\n");
 		rc = -ENODEV;
@@ -276,6 +276,6 @@ module_init(sl_eeprom_driver_init);
 module_exit(sl_eeprom_driver_exit);
 MODULE_DESCRIPTION("3DSL EEPROM driver");
 MODULE_LICENSE("GPL v2");
-MODULE_AUTHOR("xiaomi camera");
+MODULE_AUTHOR("camera");
 MODULE_VERSION("1.0");
 
