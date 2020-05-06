@@ -1517,6 +1517,8 @@ static void ufshcd_ungate_work(struct work_struct *work)
 	ufshcd_hba_vreg_set_hpm(hba);
 	ufshcd_enable_clocks(hba);
 
+	ufshcd_enable_irq(hba);
+
 	/* Exit from hibern8 */
 	if (ufshcd_can_hibern8_during_gating(hba)) {
 		/* Prevent gating in this path */
@@ -1569,6 +1571,11 @@ start:
 		 */
 		if (ufshcd_can_hibern8_during_gating(hba) &&
 		    ufshcd_is_link_hibern8(hba)) {
+			if (async) {
+				rc = -EAGAIN;
+				hba->clk_gating.active_reqs--;
+				break;
+			}
 			spin_unlock_irqrestore(hba->host->host_lock, flags);
 			flush_work(&hba->clk_gating.ungate_work);
 			spin_lock_irqsave(hba->host->host_lock, flags);
@@ -1673,6 +1680,8 @@ static void ufshcd_gate_work(struct work_struct *work)
 		}
 		ufshcd_set_link_hibern8(hba);
 	}
+
+	ufshcd_disable_irq(hba);
 
 	/*
 	 * If auto hibern8 is supported then the link will already
@@ -2410,7 +2419,7 @@ static void ufshcd_clk_scaling_update_busy(struct ufs_hba *hba)
 	if (!hba->outstanding_reqs && scaling->is_busy_started) {
 		scaling->tot_busy_t += ktime_to_us(ktime_sub(ktime_get(),
 					scaling->busy_start_t));
-		scaling->busy_start_t = 0;
+		scaling->busy_start_t = ktime_set(0, 0);
 		scaling->is_busy_started = false;
 	}
 }
@@ -2472,8 +2481,7 @@ int ufshcd_copy_query_response(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 	memcpy(&query_res->upiu_res, &lrbp->ucd_rsp_ptr->qr, QUERY_OSF_SIZE);
 
 	/* Get the descriptor */
-	if (hba->dev_cmd.query.descriptor &&
-	    lrbp->ucd_rsp_ptr->qr.opcode == UPIU_QUERY_OPCODE_READ_DESC) {
+	if (lrbp->ucd_rsp_ptr->qr.opcode == UPIU_QUERY_OPCODE_READ_DESC) {
 		u8 *descp = (u8 *)lrbp->ucd_rsp_ptr +
 				GENERAL_UPIU_REQUEST_SIZE;
 		u16 resp_len;
@@ -3791,10 +3799,10 @@ static int __ufshcd_query_descriptor(struct ufs_hba *hba,
 		goto out_unlock;
 	}
 
+	hba->dev_cmd.query.descriptor = NULL;
 	*buf_len = be16_to_cpu(response->upiu_res.length);
 
 out_unlock:
-	hba->dev_cmd.query.descriptor = NULL;
 	mutex_unlock(&hba->dev_cmd.lock);
 	if (has_read_lock)
 		up_read(&hba->lock);
@@ -3826,8 +3834,12 @@ int ufshcd_query_descriptor(struct ufs_hba *hba,
 	int retries;
 
 	for (retries = QUERY_REQ_RETRIES; retries > 0; retries--) {
-		err = __ufshcd_query_descriptor(hba, opcode, idn, index,
+		err = -EAGAIN;
+		down_read(&hba->query_lock);
+		if (!ufshcd_is_link_hibern8(hba))
+			err = __ufshcd_query_descriptor(hba, opcode, idn, index,
 						selector, desc_buf, buf_len);
+		up_read(&hba->query_lock);
 		if (!err || err == -EINVAL)
 			break;
 	}
@@ -3835,47 +3847,6 @@ int ufshcd_query_descriptor(struct ufs_hba *hba,
 	return err;
 }
 EXPORT_SYMBOL(ufshcd_query_descriptor);
-
-/**
- * ufshcd_read_desc_length - read the specified descriptor length from header
- * @hba: Pointer to adapter instance
- * @desc_id: descriptor idn value
- * @desc_index: descriptor index
- * @desc_length: pointer to variable to read the length of descriptor
- *
- * Return 0 in case of success, non-zero otherwise
- */
-static int ufshcd_read_desc_length(struct ufs_hba *hba,
-	enum desc_idn desc_id,
-	int desc_index,
-	int *desc_length)
-{
-	int ret;
-	u8 header[QUERY_DESC_HDR_SIZE];
-	int header_len = QUERY_DESC_HDR_SIZE;
-
-	if (desc_id >= QUERY_DESC_IDN_MAX)
-		return -EINVAL;
-
-	ret = ufshcd_query_descriptor(hba, UPIU_QUERY_OPCODE_READ_DESC,
-					desc_id, desc_index, 0, header,
-					&header_len);
-
-	if (ret) {
-		dev_err(hba->dev, "%s: Failed to get descriptor header id %d",
-			__func__, desc_id);
-		return ret;
-	} else if (desc_id != header[QUERY_DESC_DESC_TYPE_OFFSET]) {
-		dev_warn(hba->dev, "%s: descriptor header id %d and desc_id %d mismatch",
-			__func__, header[QUERY_DESC_DESC_TYPE_OFFSET],
-			desc_id);
-		ret = -EINVAL;
-	}
-
-	*desc_length = header[QUERY_DESC_LENGTH_OFFSET];
-	return ret;
-
-}
 
 /**
  * ufshcd_map_desc_id_to_length - map descriptor IDN to its length
@@ -3992,8 +3963,8 @@ static int ufshcd_read_desc_param(struct ufs_hba *hba,
 	}
 
 	/* Check wherher we will not copy more data, than available */
-	if (is_kmalloc && param_size > buff_len)
-		param_size = buff_len;
+	if (is_kmalloc && param_offset + param_size > buff_len)
+		param_size = buff_len - param_offset;
 
 	if (is_kmalloc)
 		memcpy(param_read_buf, &desc_buf[param_offset], param_size);
@@ -4022,6 +3993,44 @@ static inline int ufshcd_read_power_desc(struct ufs_hba *hba,
 int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size)
 {
 	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE, 0, buf, size);
+}
+
+/**
+ * ufshcd_read_desc_length - read the specified descriptor length from header
+ * @hba: Pointer to adapter instance
+ * @desc_id: descriptor idn value
+ * @desc_index: descriptor index
+ * @desc_length: pointer to variable to read the length of descriptor
+ *
+ * Return 0 in case of success, non-zero otherwise
+ */
+static int ufshcd_read_desc_length(struct ufs_hba *hba,
+	enum desc_idn desc_id,
+	int desc_index,
+	int *desc_length)
+{
+	int ret;
+	u8 header[QUERY_DESC_HDR_SIZE];
+	int header_len = QUERY_DESC_HDR_SIZE;
+
+	if (desc_id >= QUERY_DESC_IDN_MAX)
+		return -EINVAL;
+
+	ret = ufshcd_read_desc_param(hba, desc_id, desc_index,
+						0, header, header_len);
+	if (ret) {
+		dev_err(hba->dev, "%s: Failed to get descriptor header id %d",
+			__func__, desc_id);
+		return ret;
+	} else if (desc_id != header[QUERY_DESC_DESC_TYPE_OFFSET]) {
+		dev_warn(hba->dev, "%s: descriptor header id %d and desc_id %d mismatch",
+			__func__, header[QUERY_DESC_DESC_TYPE_OFFSET],
+			desc_id);
+		ret = -EINVAL;
+	}
+
+	*desc_length = header[QUERY_DESC_LENGTH_OFFSET];
+	return ret;
 }
 
 /**
@@ -7494,19 +7503,19 @@ static u32 ufshcd_find_max_sup_active_icc_level(struct ufs_hba *hba,
 		goto out;
 	}
 
-	if (hba->vreg_info.vcc && hba->vreg_info.vcc->max_uA)
+	if (hba->vreg_info.vcc)
 		icc_level = ufshcd_get_max_icc_level(
 				hba->vreg_info.vcc->max_uA,
 				POWER_DESC_MAX_ACTV_ICC_LVLS - 1,
 				&desc_buf[PWR_DESC_ACTIVE_LVLS_VCC_0]);
 
-	if (hba->vreg_info.vccq && hba->vreg_info.vccq->max_uA)
+	if (hba->vreg_info.vccq)
 		icc_level = ufshcd_get_max_icc_level(
 				hba->vreg_info.vccq->max_uA,
 				icc_level,
 				&desc_buf[PWR_DESC_ACTIVE_LVLS_VCCQ_0]);
 
-	if (hba->vreg_info.vccq2 && hba->vreg_info.vccq2->max_uA)
+	if (hba->vreg_info.vccq2)
 		icc_level = ufshcd_get_max_icc_level(
 				hba->vreg_info.vccq2->max_uA,
 				icc_level,
@@ -8114,8 +8123,7 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 			hba->dev_info.f_power_on_wp_en = flag;
 
 		/* Add required well known logical units to scsi mid layer */
-		ret = ufshcd_scsi_add_wlus(hba);
-		if (ret)
+		if (ufshcd_scsi_add_wlus(hba))
 			goto out;
 
 		/* Initialize devfreq after UFS device is detected */
@@ -8636,15 +8644,6 @@ static int ufshcd_config_vreg_load(struct device *dev, struct ufs_vreg *vreg,
 	if (!vreg)
 		return 0;
 
-	/*
-	 * "set_load" operation shall be required on those regulators
-	 * which specifically configured current limitation. Otherwise
-	 * zero max_uA may cause unexpected behavior when regulator is
-	 * enabled or set as high power mode.
-	 */
-	if (!vreg->max_uA)
-		return 0;
-
 	ret = regulator_set_load(vreg->reg, ua);
 	if (ret < 0) {
 		dev_err(dev, "%s: %s set load (ua=%d) failed, err=%d\n",
@@ -8696,15 +8695,12 @@ static int ufshcd_config_vreg(struct device *dev,
 		if (ret)
 			goto out;
 
-		if (vreg->min_uV && vreg->max_uV) {
-			min_uV = on ? vreg->min_uV : 0;
-			ret = regulator_set_voltage(reg, min_uV, vreg->max_uV);
-			if (ret) {
-				dev_err(dev,
-					"%s: %s set voltage failed, err=%d\n",
+		min_uV = on ? vreg->min_uV : 0;
+		ret = regulator_set_voltage(reg, min_uV, vreg->max_uV);
+		if (ret) {
+			dev_err(dev, "%s: %s set voltage failed, err=%d\n",
 					__func__, name, ret);
-				goto out;
-			}
+			goto out;
 		}
 	}
 out:
@@ -9379,8 +9375,8 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	enum ufs_pm_level pm_lvl;
 	enum ufs_dev_pwr_mode req_dev_pwr_mode;
 	enum uic_link_state req_link_state;
+	bool need_upwrite = false;
 
-	hba->pm_op_in_progress = 1;
 	if (!ufshcd_is_shutdown_pm(pm_op)) {
 		pm_lvl = ufshcd_is_runtime_pm(pm_op) ?
 			 hba->rpm_lvl : hba->spm_lvl;
@@ -9390,6 +9386,15 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		req_dev_pwr_mode = UFS_POWERDOWN_PWR_MODE;
 		req_link_state = UIC_LINK_OFF_STATE;
 	}
+
+	if (ufshcd_is_runtime_pm(pm_op) &&
+			req_link_state == UIC_LINK_HIBERN8_STATE &&
+			ufshcd_is_auto_hibern8_supported(hba)) {
+		need_upwrite = true;
+		if (!down_write_trylock(&hba->query_lock))
+			return -EBUSY;
+	}
+	hba->pm_op_in_progress = 1;
 
 	/*
 	 * If we can't transition into any of the low power modes
@@ -9510,6 +9515,8 @@ enable_gating:
 	ufshcd_release_all(hba);
 out:
 	hba->pm_op_in_progress = 0;
+	if (need_upwrite)
+		up_write(&hba->query_lock);
 
 	if (ret)
 		ufshcd_update_error_stats(hba, UFS_ERR_SUSPEND);
@@ -9966,9 +9973,6 @@ static void ufshcd_shutdown_clkscaling(struct ufs_hba *hba)
 int ufshcd_shutdown(struct ufs_hba *hba)
 {
 	int ret = 0;
-
-	if (!hba->is_powered)
-		goto out;
 
 	if (ufshcd_is_ufs_dev_poweroff(hba) && ufshcd_is_link_off(hba))
 		goto out;
@@ -10590,7 +10594,7 @@ start_window:
 		scaling->busy_start_t = ktime_get();
 		scaling->is_busy_started = true;
 	} else {
-		scaling->busy_start_t = 0;
+		scaling->busy_start_t = ktime_set(0, 0);
 		scaling->is_busy_started = false;
 	}
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
@@ -10718,6 +10722,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	mutex_init(&hba->dev_cmd.lock);
 
 	init_rwsem(&hba->lock);
+	init_rwsem(&hba->query_lock);
 
 	/* Initialize device management tag acquire wait queue */
 	init_waitqueue_head(&hba->dev_cmd.tag_wq);
@@ -10823,6 +10828,8 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	ufsdbg_add_debugfs(hba);
 
 	ufshcd_add_sysfs_nodes(hba);
+
+	device_enable_async_suspend(dev);
 
 	return 0;
 
