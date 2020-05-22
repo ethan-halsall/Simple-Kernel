@@ -66,10 +66,10 @@ struct task_entry {
 
 struct uid_entry {
 	uid_t uid;
-	cputime_t utime;
-	cputime_t stime;
-	cputime_t active_utime;
-	cputime_t active_stime;
+	u64 utime;
+	u64 stime;
+	u64 active_utime;
+	u64 active_stime;
 	int state;
 	struct io_stats io[UID_STATE_SIZE];
 	struct hlist_node hash;
@@ -365,12 +365,12 @@ static int uid_cputime_show(struct seq_file *m, void *v)
 	rcu_read_unlock();
 
 	hash_for_each(hash_table, bkt, uid_entry, hash) {
-	u64 total_utime = uid_entry->utime +
-			    uid_entry->active_utime;
-	u64 total_stime = uid_entry->stime +
-			    uid_entry->active_stime;
-	seq_printf(m, "%d: %llu %llu\n", uid_entry->uid,
-			ktime_to_us(total_utime), ktime_to_us(total_stime));
+		u64 total_utime = uid_entry->utime +
+							uid_entry->active_utime;
+		u64 total_stime = uid_entry->stime +
+							uid_entry->active_stime;
+		seq_printf(m, "%d: %llu %llu\n", uid_entry->uid,
+			ktime_to_ms(total_utime), ktime_to_ms(total_stime));
 	}
 
 	rt_mutex_unlock(&uid_lock);
