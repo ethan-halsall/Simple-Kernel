@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  *  Housekeeping management. Manage the targets for routine code that can run on
  *  any CPU: unbound workqueues, timers, kthreads and any offloadable work.
@@ -6,29 +7,25 @@
  * Copyright (C) 2017-2018 SUSE, Frederic Weisbecker
  *
  */
-
 #include <linux/tick.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/static_key.h>
 #include <linux/ctype.h>
 #include <linux/cpumask.h>
+#include <linux/sched/isolation.h>
 #include "sched.h"
-
-enum hk_flags {
-	HK_FLAG_TIMER		= 1,
-	HK_FLAG_RCU		= (1 << 1),
-	HK_FLAG_MISC		= (1 << 2),
-	HK_FLAG_SCHED		= (1 << 3),
-	HK_FLAG_TICK		= (1 << 4),
-	HK_FLAG_DOMAIN		= (1 << 5),
-	HK_FLAG_WQ		= (1 << 6),
-};
 
 DEFINE_STATIC_KEY_FALSE(housekeeping_overridden);
 EXPORT_SYMBOL_GPL(housekeeping_overridden);
 static cpumask_var_t housekeeping_mask;
 static unsigned int housekeeping_flags;
+
+bool housekeeping_enabled(enum hk_flags flags)
+{
+	return !!(housekeeping_flags & flags);
+}
+EXPORT_SYMBOL_GPL(housekeeping_enabled);
 
 int housekeeping_any_cpu(enum hk_flags flags)
 {
@@ -159,6 +156,9 @@ __setup("nohz_full=", housekeeping_nohz_full_setup);
 static int __init housekeeping_isolcpus_setup(char *str)
 {
 	unsigned int flags = 0;
+	bool illegal = false;
+	char *par;
+	int len;
 
 	while (isalpha(*str)) {
 		if (!strncmp(str, "nohz,", 5)) {
@@ -173,8 +173,22 @@ static int __init housekeeping_isolcpus_setup(char *str)
 			continue;
 		}
 
-		pr_warn("isolcpus: Error, unknown flag\n");
-		return 0;
+		/*
+		 * Skip unknown sub-parameter and validate that it is not
+		 * containing an invalid character.
+		 */
+		for (par = str, len = 0; *str && *str != ','; str++, len++) {
+			if (!isalpha(*str) && *str != '_')
+				illegal = true;
+		}
+
+		if (illegal) {
+			pr_warn("isolcpus: Invalid flag %.*s\n", len, par);
+			return 0;
+		}
+
+		pr_info("isolcpus: Skipped unknown flag %.*s\n", len, par);
+		str++;
 	}
 
 	/* Default behaviour for isolcpus without flags */
