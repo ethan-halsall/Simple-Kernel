@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.9.223 Kernel Configuration
+# Linux/arm64 4.9.224 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -2745,9 +2745,10 @@ CONFIG_V4L_PLATFORM_DRIVERS=y
 #
 CONFIG_SPECTRA_CAMERA=y
 # CONFIG_MSM_CAMERA is not set
-# CONFIG_MSMB_CAMERA is not set
+CONFIG_XIAOMI_DIR_CAMERA=y
 # CONFIG_USE_BU64748 is not set
 # CONFIG_USE_ROHM_BU64753 is not set
+# CONFIG_MSMB_CAMERA is not set
 # CONFIG_SPECTRA2_CAMERA is not set
 # CONFIG_MSM_VIDC_3X_V4L2 is not set
 CONFIG_MSM_VIDC_V4L2=y
