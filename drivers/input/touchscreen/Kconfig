@@ -1485,4 +1485,12 @@ config SECURE_TOUCH
 config I2C_BY_DMA
 	bool "I2C BY DMA"
 
+config TOUCHSCREEN_RAYDIUM_CHIPSET
+	bool "Raydium WT030 touchpanel CHIPSET"
+	depends on I2C
+	help
+	  Say Y here if you have a Raydium WT030 CHIPSET touchscreen.
+
+	  If unsure, say N.
+
 endif

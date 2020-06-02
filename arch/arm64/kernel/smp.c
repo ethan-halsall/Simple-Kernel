@@ -1025,6 +1025,13 @@ static inline unsigned int num_other_online_cpus(void)
 	return num_online_cpus() - this_cpu_online;
 }
 
+static inline unsigned int num_other_active_cpus(void)
+{
+	unsigned int this_cpu_active = cpu_active(smp_processor_id());
+
+	return num_active_cpus() - this_cpu_active;
+}
+
 void smp_send_stop(void)
 {
 	unsigned long timeout;

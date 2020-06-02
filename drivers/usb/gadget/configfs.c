@@ -310,9 +310,6 @@ static ssize_t gadget_dev_desc_UDC_store(struct config_item *item,
 	char *name;
 	int ret;
 
-	if (strlen(page) < len)
-		return -EOVERFLOW;
-
 	name = kstrdup(page, GFP_KERNEL);
 	if (!name)
 		return -ENOMEM;
@@ -1427,7 +1424,7 @@ err_comp_cleanup:
 	return ret;
 }
 
-static int smblib_cancel_recheck(void)
+static int smblib_canncel_recheck(void)
 {
 	union power_supply_propval pval = {0};
 	struct power_supply     *usb_psy = NULL;
@@ -1435,7 +1432,7 @@ static int smblib_cancel_recheck(void)
 	if (!usb_psy) {
 		usb_psy = power_supply_get_by_name("usb");
 		if (!usb_psy) {
-			pr_err("Could not get usb psy by cancel recheck\n");
+			pr_err("Could not get usb psy by canncel recheck\n");
 			return -ENODEV;
 		}
 	}
@@ -1484,8 +1481,8 @@ static void android_work(struct work_struct *data)
 		kobject_uevent_env(&gi->dev->kobj,
 					KOBJ_CHANGE, configured);
 		pr_info("%s: sent uevent %s\n", __func__, configured[0]);
-		smblib_cancel_recheck();
 		place_marker("M - USB enumeration complete");
+		smblib_canncel_recheck();
 		uevent_sent = true;
 	}
 
