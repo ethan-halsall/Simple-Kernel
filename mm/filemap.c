@@ -1850,7 +1850,7 @@ static ssize_t do_generic_file_read(struct file *filp, loff_t *ppos,
 		unsigned long nr, ret;
 		ktime_t event_ts;
 
-		event_ts.tv64 = 0;
+		event_ts = 0;
 		cond_resched();
 find_page:
 		if (fatal_signal_pending(current)) {
@@ -1902,7 +1902,7 @@ find_page:
 			unlock_page(page);
 		}
 page_ok:
-		if (event_ts.tv64 != 0)
+		if (event_ts != 0)
 			mm_event_end(MM_READ_IO, event_ts);
 		/*
 		 * i_size must be checked after we know the page is Uptodate.
