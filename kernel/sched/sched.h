@@ -2011,8 +2011,8 @@ static inline unsigned long cpu_util_cfs(struct rq *rq)
 #ifdef CONFIG_CPU_FREQ_GOV_SCHEDUTIL
 
 unsigned long schedutil_freq_util(int cpu, unsigned long util,
-                  unsigned long max, enum schedutil_type type);
-
+				unsigned long max, enum schedutil_type type,
+				struct task_struct *p);
 
 static inline unsigned long cpu_bw_dl(struct rq *rq)
 {
@@ -2029,18 +2029,11 @@ static inline unsigned long cpu_util_rt(struct rq *rq)
     return READ_ONCE(rq->avg_rt.util_avg);
 }
 
-static inline unsigned long cpu_util_freq(int cpu)
-{
-    struct rq *rq = cpu_rq(cpu);
-
-    return min(cpu_util_cfs(rq) + cpu_util_rt(rq), capacity_orig_of(cpu));
-}
-
 static inline unsigned long schedutil_energy_util(int cpu, unsigned long util)
 {
 	unsigned long max = arch_scale_cpu_capacity(NULL, cpu);
 
-	return schedutil_freq_util(cpu, util, max, ENERGY_UTIL);
+	return schedutil_freq_util(cpu, util, max, ENERGY_UTIL, NULL);
 }
 
 #else /* CONFIG_CPU_FREQ_GOV_SCHEDUTIL */
