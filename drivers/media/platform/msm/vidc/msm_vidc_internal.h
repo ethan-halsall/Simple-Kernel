@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -242,6 +242,19 @@ struct msm_vidc_format {
 	int type;
 	u32 (*get_frame_size)(int plane, u32 height, u32 width);
 	bool defer_outputs;
+};
+
+struct msm_vidc_format_constraint {
+	u32 fourcc;
+	u32 num_planes;
+	u32 y_stride_multiples;
+	u32 y_max_stride;
+	u32 y_min_plane_buffer_height_multiple;
+	u32 y_buffer_alignment;
+	u32 uv_stride_multiples;
+	u32 uv_max_stride;
+	u32 uv_min_plane_buffer_height_multiple;
+	u32 uv_buffer_alignment;
 };
 
 struct msm_vidc_drv {
