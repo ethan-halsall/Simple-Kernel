@@ -904,6 +904,7 @@ struct drm_device {
 	/*@} */
 	int switch_power_state;
 	int doze_state;
+	bool fp_quickon;
 	int pre_state;
 	int doze_brightness;
 	int hbm_status;
