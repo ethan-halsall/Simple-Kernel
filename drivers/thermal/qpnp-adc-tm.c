@@ -264,10 +264,8 @@ struct qpnp_adc_tm_sensor {
 	bool				thermal_node;
 	uint32_t			scale_type;
 	struct list_head		thr_list;
-	int				high_thr_triggered;
-	int				low_thr_triggered;
-	int				tmp_high_thr_triggered;
-	int				tmp_low_thr_triggered;
+	bool				high_thr_triggered;
+	bool				low_thr_triggered;
 	int				emul_temperature;
 };
 
