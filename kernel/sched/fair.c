@@ -6790,8 +6790,9 @@ static int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu, int sy
 
 	if (sysctl_sched_sync_hint_enable && sync) {
 		cpu = smp_processor_id();
-		if (cpumask_test_cpu(cpu, &p->cpus_allowed))
-			return cpu;
+		if (cpumask_test_cpu(cpu, &p->cpus_allowed) &&
+	        task_fits_capacity(p, capacity_of(cpu)))
+				return cpu;
 	}
 
 	rcu_read_lock();
